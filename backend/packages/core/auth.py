@@ -6,12 +6,18 @@ from packages.core.config import settings
 
 security = HTTPBearer()
 
+import time
+
 # Cache for JWKS
 _jwks_cache = None
+_jwks_cache_time = 0
+JWKS_CACHE_TTL = 3600  # 1 hour
 
-async def get_jwks():
-    global _jwks_cache
-    if _jwks_cache:
+async def get_jwks(force_refresh=False):
+    global _jwks_cache, _jwks_cache_time
+    now = time.time()
+    
+    if not force_refresh and _jwks_cache and (now - _jwks_cache_time < JWKS_CACHE_TTL):
         return _jwks_cache
     
     # Normally we'd extract the domain from the publishable key or secret
@@ -31,32 +37,40 @@ async def get_jwks():
         if response.status_code != 200:
             raise HTTPException(status_code=500, detail="Failed to fetch JWKS from Clerk")
         _jwks_cache = response.json()
+        _jwks_cache_time = now
         return _jwks_cache
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(security)):
     token = credentials.credentials
     
     try:
-        # 1. Fetch JWKS
-        jwks = await get_jwks()
-        
-        # 2. Get unverified header to find kid
+        # 1. Get unverified header to find kid
         unverified_header = jwt.get_unverified_header(token)
         kid = unverified_header.get('kid')
         
+        # 2. Fetch JWKS
+        jwks = await get_jwks()
+        
         # 3. Find matching key
-        rsa_key = {}
-        for key in jwks.get("keys", []):
-            if key["kid"] == kid:
-                rsa_key = {
-                    "kty": key["kty"],
-                    "kid": key["kid"],
-                    "use": key["use"],
-                    "n": key["n"],
-                    "e": key["e"]
-                }
-                break
-                
+        def find_key(jwks_dict):
+            for key in jwks_dict.get("keys", []):
+                if key["kid"] == kid:
+                    return {
+                        "kty": key["kty"],
+                        "kid": key["kid"],
+                        "use": key["use"],
+                        "n": key["n"],
+                        "e": key["e"]
+                    }
+            return {}
+            
+        rsa_key = find_key(jwks)
+        
+        if not rsa_key:
+            # Refresh JWKS and retry once
+            jwks = await get_jwks(force_refresh=True)
+            rsa_key = find_key(jwks)
+            
         if not rsa_key:
             raise HTTPException(status_code=401, detail="Invalid token: Key not found")
             
@@ -75,5 +89,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=str(e))
+    except HTTPException:
+        raise
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
