@@ -31,11 +31,11 @@ async def verify_stripe_signature(request: Request):
     
     try:
         # Stripe-Signature: t=1614992683,v1=5257a869e7ecebeda32affa62cecdeefa996020db209e51c8903c73493db616f
-        parts = dict(part.split("=", 1) for part in signature_header.split(","))
-        timestamp = parts.get("t")
-        sig = parts.get("v1")
+        parts = [part.split("=", 1) for part in signature_header.split(",") if "=" in part]
+        timestamp = next((v for k, v in parts if k == "t"), None)
+        sigs = [v for k, v in parts if k == "v1"]
         
-        if not timestamp or not sig:
+        if not timestamp or not sigs:
             raise ValueError()
             
         timestamp_int = int(timestamp)
@@ -45,7 +45,7 @@ async def verify_stripe_signature(request: Request):
         signed_payload = f"{timestamp}.{body.decode('utf-8')}"
         expected_sig = hmac.new(STRIPE_SECRET.encode(), signed_payload.encode(), hashlib.sha256).hexdigest()
         
-        if not hmac.compare_digest(sig, expected_sig):
+        if not any(hmac.compare_digest(sig, expected_sig) for sig in sigs):
             raise HTTPException(status_code=401, detail="Invalid signature")
             
     except Exception as e:

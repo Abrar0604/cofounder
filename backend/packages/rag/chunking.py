@@ -7,8 +7,8 @@ class LegalDocumentChunker:
         
     def chunk_document(self, text: str, metadata: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Mock implementation of chunking a document."""
-        if self.chunk_size <= 0 or self.overlap >= self.chunk_size:
-            raise ValueError("chunk_size must be positive and overlap must be less than chunk_size")
+        if self.chunk_size <= 0 or self.overlap < 0 or self.overlap >= self.chunk_size:
+            raise ValueError("chunk_size must be positive and overlap must be non-negative and less than chunk_size")
             
         chunks = []
         if not text:
