@@ -25,6 +25,6 @@ class SSEPublisher:
             while True:
                 data = await queue.get()
                 yield f"data: {json.dumps(data)}\n\n"
-        except asyncio.CancelledError:
-            self.unsubscribe(client_id)
-            raise
+        finally:
+            if self.queues.get(client_id) is queue:
+                del self.queues[client_id]

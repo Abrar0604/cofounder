@@ -17,13 +17,13 @@ export function ChatWindow() {
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: "smooth" })
+      scrollRef.current.scrollIntoView({ behavior: isTyping ? "auto" : "smooth" })
     }
   }
 
   React.useEffect(() => {
     scrollToBottom()
-  }, [messages])
+  }, [messages, isTyping])
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,17 +39,12 @@ export function ChatWindow() {
     setInput("")
     setIsTyping(true)
 
+    const assistantMessageId = (Date.now() + 1).toString()
+    
     // Simulate SSE using standard fetch streams
-    // For this example, we'll hit a dummy endpoint and simulate streaming response
     try {
-      const assistantMessageId = (Date.now() + 1).toString()
       setMessages(prev => [...prev, { id: assistantMessageId, role: "assistant", content: "" }])
       
-      // Real app would fetch from a real SSE endpoint:
-      // const response = await fetch('/api/chat', { method: 'POST', body: JSON.stringify({ message: input }) })
-      // const reader = response.body?.getReader()
-      
-      // Simulating a streaming response with timeout
       const dummyResponse = "This is a simulated streaming response from the server."
       const chunks = dummyResponse.split(" ")
       
@@ -66,6 +61,11 @@ export function ChatWindow() {
       }
     } catch (error) {
       console.error("Chat error:", error)
+      setMessages(prev => prev.map(msg => 
+        msg.id === assistantMessageId 
+          ? { ...msg, content: "Sorry, an error occurred." } 
+          : msg
+      ))
     } finally {
       setIsTyping(false)
     }

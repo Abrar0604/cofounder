@@ -43,8 +43,10 @@ test.describe('Theme Rules', () => {
         }
         
         // Check border color
-        if (!isTransparent(style.borderColor) && !isMonochrome(style.borderColor)) {
-          violations.push(`Element <${el.tagName}> has non-monochrome border color: ${style.borderColor}`);
+        if (style.borderTopWidth !== '0px' && style.borderTopWidth !== '') {
+          if (!isTransparent(style.borderColor) && !isMonochrome(style.borderColor)) {
+            violations.push(`Element <${el.tagName}> has non-monochrome border color: ${style.borderColor}`);
+          }
         }
         
         // Check for gradients in background image

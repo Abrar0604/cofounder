@@ -11,7 +11,7 @@ async def retrieve_legal_context(state: AgentState) -> Dict[str, Any]:
         {"id": "doc2", "text": "Securities regulations apply to equity issuance."}
     ]
     
-    context = state.get("context", {})
+    context = dict(state.get("context", {}))
     context["legal_documents"] = retrieved_docs
     
     return {"status": "context_retrieved", "context": context}

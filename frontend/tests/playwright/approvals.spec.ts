@@ -6,30 +6,29 @@ test.describe('Approvals Inbox', () => {
     await page.goto('/dashboard/approvals');
     
     // Find the first approval card
-    const firstCard = page.locator('.rounded-none.shadow-none').first();
-    const reviewButton = firstCard.locator('button', { hasText: 'Review' });
+    const firstCard = page.getByTestId('approval-card').first();
+    const reviewButton = firstCard.getByRole('button', { name: 'Review' });
     await expect(reviewButton).toBeVisible();
 
     // Verify it initially says "Pending"
-    // Using an explicit locator for the badge to avoid relying on utility classes
-    await expect(firstCard.locator('span', { hasText: 'Pending' })).toBeVisible();
+    await expect(firstCard.getByText('Pending', { exact: true })).toBeVisible();
 
     // Click "Review" to open the dialog
     await reviewButton.click();
 
     // The dialog should be open
-    const dialog = page.locator('[role="dialog"]');
+    const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
 
     // Find and click the "Approve" button
-    const approveButton = dialog.locator('button:has-text("Approve")');
+    const approveButton = dialog.getByRole('button', { name: 'Approve', exact: true });
     await approveButton.click();
 
     // The dialog should close
     await expect(dialog).not.toBeVisible();
 
     // The badge should now say "Approved"
-    await expect(firstCard.locator('span', { hasText: 'Approved' })).toBeVisible();
+    await expect(firstCard.getByText('Approved', { exact: true })).toBeVisible();
 
     // The "Review" button should no longer be visible
     await expect(reviewButton).not.toBeVisible();

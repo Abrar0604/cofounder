@@ -30,11 +30,6 @@ const data = {
       url: "/dashboard/chat",
       icon: MessageSquare,
     },
-    {
-      title: "Settings",
-      url: "#",
-      icon: Settings,
-    },
   ],
 }
 

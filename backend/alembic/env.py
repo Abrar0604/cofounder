@@ -13,6 +13,8 @@ from packages.brain.models.tenant import Base
 from packages.brain.models.venture import Venture
 
 config = context.config
+from packages.core.config import settings
+config.set_main_option("sqlalchemy.url", settings.database_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

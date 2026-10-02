@@ -39,7 +39,7 @@ export function ApprovalCard({ title, requester, date, details }: ApprovalCardPr
   }
 
   return (
-    <Card className="rounded-none shadow-none">
+    <Card className="rounded-none shadow-none" data-testid="approval-card">
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
