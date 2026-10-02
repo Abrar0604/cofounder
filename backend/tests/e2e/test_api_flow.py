@@ -3,7 +3,7 @@ from httpx import AsyncClient, ASGITransport
 import hmac
 import hashlib
 from apps.webhooks.main import app as webhook_app
-from apps.webhooks.verify import SECRET_KEY
+from apps.webhooks.verify import GITHUB_SECRET
 from apps.api.routes.approvals import router as approvals_router
 from fastapi import FastAPI
 
@@ -15,7 +15,7 @@ api_app.include_router(approvals_router)
 async def test_webhook_flow():
     # Simulate a webhook from GitHub
     payload = b'{"action": "opened", "issue": {"title": "Test Issue"}}'
-    signature = "sha256=" + hmac.new(SECRET_KEY, payload, hashlib.sha256).hexdigest()
+    signature = "sha256=" + hmac.new(GITHUB_SECRET.encode(), payload, hashlib.sha256).hexdigest()
     
     async with AsyncClient(transport=ASGITransport(app=webhook_app), base_url="http://test") as client:
         response = await client.post(

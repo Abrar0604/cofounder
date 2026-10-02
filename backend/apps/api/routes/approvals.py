@@ -2,18 +2,18 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Any, Dict
 from packages.approvals.service import ApprovalService
+from langgraph.checkpoint.memory import MemorySaver
+from packages.agents.orchestrator.graph import create_orchestrator_graph
 
 router = APIRouter(prefix="/approvals", tags=["approvals"])
 
-# Dummy dependency injection setup
+# Shared checkpointer and graph
+shared_checkpointer = MemorySaver()
+shared_graph = create_orchestrator_graph(checkpointer=shared_checkpointer)
+shared_approval_service = ApprovalService(shared_graph)
+
 def get_approval_service() -> ApprovalService:
-    # In a real setup, this would return an instantiated ApprovalService 
-    # with a real checkpointer.
-    class DummyCheckpointer:
-        async def aget(self, config):
-            return {"mock": "state"}
-            
-    return ApprovalService(DummyCheckpointer())
+    return shared_approval_service
 
 class ApprovalRequest(BaseModel):
     data: Dict[str, Any]

@@ -17,7 +17,7 @@ def route_next(state: AgentState) -> str:
         return agent
     return END
 
-def create_orchestrator_graph():
+def create_orchestrator_graph(checkpointer=None):
     workflow = StateGraph(AgentState)
     
     workflow.add_node("router", router_node)
@@ -47,4 +47,4 @@ def create_orchestrator_graph():
     for agent in agents:
         workflow.add_edge(agent, END)
     
-    return workflow.compile()
+    return workflow.compile(checkpointer=checkpointer)
