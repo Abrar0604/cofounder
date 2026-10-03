@@ -12,7 +12,10 @@ async def summarize_for_founder(deps, state: OrchestratorState) -> dict:
     
     # We pass the system prompt first, then append the recent context (e.g. up to 10 messages)
     context = msgs[-10:]
-    payload = [{"role": "system", "content": prompt}]
+    
+    current_task = state.get("task", "None")
+    system_content = f"{prompt}\n\nCurrent Task: {current_task}"
+    payload = [{"role": "system", "content": system_content}]
     
     for m in context:
         t = getattr(m, "type", "other")
