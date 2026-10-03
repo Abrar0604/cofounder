@@ -69,6 +69,11 @@ export function ChatWindow() {
       }
     }
     
+    eventSource.onerror = () => {
+      console.error("SSE connection error")
+      setIsReady(false)
+    }
+    
     return () => {
       eventSource.close()
     }

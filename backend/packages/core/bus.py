@@ -15,17 +15,17 @@ class EventBus:
         
     async def subscribe(self, channel: str) -> AsyncGenerator[Dict[str, Any], None]:
         pubsub = self.redis.pubsub()
-        await pubsub.subscribe(channel)
-        
-        # Wait for subscription confirmation
-        while True:
-            msg = await pubsub.get_message(ignore_subscribe_messages=False, timeout=1.0)
-            if msg and msg.get("type") == "subscribe":
-                break
-                
-        yield {"type": "connected", "payload": {}}
-                
         try:
+            await pubsub.subscribe(channel)
+            
+            # Wait for subscription confirmation
+            while True:
+                msg = await pubsub.get_message(ignore_subscribe_messages=False, timeout=1.0)
+                if msg and msg.get("type") == "subscribe":
+                    break
+                    
+            yield {"type": "connected", "payload": {}}
+                    
             async for message in pubsub.listen():
                 if message["type"] == "message":
                     try:
