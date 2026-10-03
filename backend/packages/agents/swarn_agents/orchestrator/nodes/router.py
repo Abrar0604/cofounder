@@ -1,9 +1,7 @@
 from packages.agents.swarn_agents.orchestrator.state import OrchestratorState
 from packages.decisions.swarn_decisions.definitions.route_supervisor import RouteSupervisorState
-from packages.agents.swarn_agents.registry import AGENT_SPECS
 
-async def choose_next_agent(deps, state: OrchestratorState) -> dict:
-    available_agents = list(AGENT_SPECS.keys())
+async def choose_next_agent(deps, state: OrchestratorState, available_agents: list[str]) -> dict:
     
     route_state = RouteSupervisorState(
         task=state.get("task", ""),

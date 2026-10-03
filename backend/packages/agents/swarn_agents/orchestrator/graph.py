@@ -7,11 +7,10 @@ from packages.agents.swarn_agents.orchestrator.nodes.summarize import summarize_
 from packages.agents.swarn_agents.orchestrator.nodes.events import handle_event_for_replan
 from packages.agents.swarn_agents.base.compact_context import compact_messages
 
-def build_orchestrator_graph(deps):
+def build_orchestrator_graph(deps, agent_specs: dict):
     workflow = StateGraph(OrchestratorState)
     
     from langchain_core.messages import RemoveMessage
-    from packages.agents.swarn_agents.registry import AGENT_SPECS
     
     # Define wrappers to inject deps
     async def compact_node(state):
@@ -32,7 +31,7 @@ def build_orchestrator_graph(deps):
         return await classify_intent(deps, state)
         
     async def router_node(state):
-        return await choose_next_agent(deps, state)
+        return await choose_next_agent(deps, state, list(agent_specs.keys()))
         
     async def dispatch_node(state):
         return await dispatch_agent(deps, state)
@@ -41,7 +40,7 @@ def build_orchestrator_graph(deps):
         return await summarize_for_founder(deps, state)
         
     async def event_node(state):
-        return await handle_event_for_replan(deps, state)
+        return await handle_event_for_replan(deps, state, agent_specs)
         
     # Add nodes
     workflow.add_node("compact", compact_node)
@@ -52,7 +51,7 @@ def build_orchestrator_graph(deps):
     workflow.add_node("event_replan", event_node)
     
     # Dynamically attach agent subgraphs from registry
-    for name, spec in AGENT_SPECS.items():
+    for name, spec in agent_specs.items():
         workflow.add_node(name, spec.build_graph(deps))
         workflow.add_edge(name, "event_replan")
     
@@ -66,13 +65,13 @@ def build_orchestrator_graph(deps):
     
     def route_dispatch(state):
         active = state.get("active_agent")
-        if not active or active not in AGENT_SPECS:
+        if not active or active not in agent_specs:
             return "summarize"
         return active
         
     # We must map every possible agent string explicitly for LangGraph validation
     dispatch_mapping = {"summarize": "summarize"}
-    for name in AGENT_SPECS.keys():
+    for name in agent_specs.keys():
         dispatch_mapping[name] = name
         
     workflow.add_conditional_edges("dispatch", route_dispatch, dispatch_mapping)

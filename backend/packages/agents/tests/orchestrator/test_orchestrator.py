@@ -52,15 +52,12 @@ async def test_classify_intent():
 @pytest.mark.asyncio
 async def test_choose_next_agent():
     # Setup dummy agent spec
-    AGENT_SPECS["market_intel"] = AgentSpec("market_intel", frozenset(), frozenset(), frozenset(), lambda d: None)
+    agent_specs = {"market_intel": AgentSpec("market_intel", frozenset(), frozenset(), frozenset(), lambda d: None)}
     
     deps = MockDeps("market_intel")
     state = {"task": "test"}
-    res = await choose_next_agent(deps, state)
+    res = await choose_next_agent(deps, state, list(agent_specs.keys()))
     assert "market_intel" in res["next_agents"]
-    
-    # Clean up
-    AGENT_SPECS.clear()
 
 @pytest.mark.asyncio
 async def test_dispatch_agent():
@@ -72,13 +69,10 @@ async def test_dispatch_agent():
 
 @pytest.mark.asyncio
 async def test_handle_event_for_replan():
-    AGENT_SPECS["validation"] = AgentSpec("validation", frozenset(), frozenset(["market_changed"]), frozenset(), lambda d: None)
+    agent_specs = {"validation": AgentSpec("validation", frozenset(), frozenset(["market_changed"]), frozenset(), lambda d: None)}
     
     deps = MockDeps("validation")
     state = {"events": [{"type": "market_changed", "payload": {}}], "next_agents": [], "active_agent": None}
-    res = await handle_event_for_replan(deps, state)
+    res = await handle_event_for_replan(deps, state, agent_specs)
     
     assert res["next_agents"] == ["validation"]
-    
-    # Clean up
-    AGENT_SPECS.clear()
