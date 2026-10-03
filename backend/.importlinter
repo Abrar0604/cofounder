@@ -1,0 +1,17 @@
+[importlinter]
+root_package = packages
+
+[importlinter:contract:independence]
+name = Agents Independence Contract
+type = independence
+modules =
+    packages.agents.swarn_agents.market_intel
+    packages.agents.swarn_agents.validation
+    packages.agents.swarn_agents.financial
+    packages.agents.swarn_agents.legal
+    packages.agents.swarn_agents.web
+    packages.agents.swarn_agents.marketing
+    packages.agents.swarn_agents.sales
+    packages.agents.swarn_agents.support
+    packages.agents.swarn_agents.operations
+    packages.agents.swarn_agents.orchestrator
