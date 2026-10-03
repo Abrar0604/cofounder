@@ -10,9 +10,10 @@ async def retrieve_statutes(deps, state: AgentState) -> dict:
     
     # We can use deps.settings to get the DB URL. If not available, fallback to os env.
     db_url = getattr(deps.settings, "database_url", None) if deps.settings else os.getenv("DATABASE_URL")
+    api_key = getattr(deps.settings, "google_api_key", None) if deps.settings else None
     
     if db_url:
-        store = get_legal_vectorstore(db_url)
+        store = get_legal_vectorstore(db_url, api_key=api_key)
         docs = await store.asimilarity_search(query, k=3)
     
     events.append({
