@@ -6,6 +6,7 @@ export interface MessageProps {
   id: string;
   role: "user" | "assistant";
   content: string;
+  isCompleted?: boolean;
 }
 
 export function Message({ role, content }: MessageProps) {

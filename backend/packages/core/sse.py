@@ -1,30 +1,20 @@
 import json
-import asyncio
 from typing import Any, Dict, AsyncGenerator
+from .bus import EventBus
+import os
 
 class SSEPublisher:
     def __init__(self):
-        self.queues: Dict[str, asyncio.Queue] = {}
-
-    def subscribe(self, client_id: str) -> asyncio.Queue:
-        queue = asyncio.Queue()
-        self.queues[client_id] = queue
-        return queue
-
-    def unsubscribe(self, client_id: str):
-        if client_id in self.queues:
-            del self.queues[client_id]
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        self.bus = EventBus(redis_url)
 
     async def publish(self, client_id: str, data: Dict[str, Any]):
-        if client_id in self.queues:
-            await self.queues[client_id].put(data)
+        await self.bus.publish(client_id, "sse_event", data)
 
     async def event_generator(self, client_id: str) -> AsyncGenerator[str, None]:
-        queue = self.subscribe(client_id)
-        try:
-            while True:
-                data = await queue.get()
+        async for event in self.bus.subscribe(client_id):
+            if event["type"] == "sse_event":
+                data = event["payload"]
                 yield f"data: {json.dumps(data)}\n\n"
-        finally:
-            if self.queues.get(client_id) is queue:
-                del self.queues[client_id]
+            else:
+                yield f"data: {json.dumps(event)}\n\n"
