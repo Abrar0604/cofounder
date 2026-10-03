@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     strong_model: str | None = None
     cheap_model: str | None = None
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=".env", 
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
 
 settings = Settings()

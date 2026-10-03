@@ -1,26 +1,30 @@
+import redis.asyncio as redis
 import json
-import logging
-from typing import Any, Dict, Optional
-from redis.asyncio import Redis
-from pydantic import BaseModel
-
-logger = logging.getLogger(__name__)
+from typing import Dict, Any, AsyncGenerator
 
 class EventBus:
     def __init__(self, redis_url: str = "redis://localhost:6379/0"):
-        self.redis = Redis.from_url(redis_url)
-
-    async def publish(self, stream_name: str, event_data: Dict[str, Any]) -> str:
-        """Publish an event to a Redis Stream."""
+        self.redis = redis.from_url(redis_url)
+        
+    async def publish(self, channel: str, event_type: str, payload: Dict[str, Any]):
+        message = {
+            "type": event_type,
+            "payload": payload
+        }
+        await self.redis.publish(channel, json.dumps(message))
+        
+    async def subscribe(self, channel: str) -> AsyncGenerator[Dict[str, Any], None]:
+        pubsub = self.redis.pubsub()
+        await pubsub.subscribe(channel)
+        
         try:
-            # Convert values to strings as Redis Streams requires
-            serialized_data = {k: json.dumps(v) if not isinstance(v, str) else v for k, v in event_data.items()}
-            message_id = await self.redis.xadd(stream_name, serialized_data)
-            logger.info(f"Published event to {stream_name}: {message_id}")
-            return message_id.decode('utf-8') if isinstance(message_id, bytes) else message_id
-        except Exception as e:
-            logger.error(f"Failed to publish event to {stream_name}: {e}")
-            raise
-
-    async def close(self):
-        await self.redis.close()
+            async for message in pubsub.listen():
+                if message["type"] == "message":
+                    try:
+                        data = json.loads(message["data"])
+                        yield data
+                    except json.JSONDecodeError:
+                        continue
+        finally:
+            await pubsub.unsubscribe(channel)
+            await pubsub.close()

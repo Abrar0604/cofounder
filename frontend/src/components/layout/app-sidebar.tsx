@@ -64,7 +64,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarFooter className="p-4 border-t border-gray-200">
         <div className="flex items-center gap-3">
-          <UserButton afterSignOutUrl="/" />
+          <UserButton />
           <span className="text-sm font-medium">Account</span>
         </div>
       </SidebarFooter>
