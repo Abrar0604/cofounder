@@ -1,8 +1,7 @@
 from packages.agents.swarn_agents.orchestrator.state import OrchestratorState
 from packages.decisions.swarn_decisions.definitions.fan_out_event import FanOutEventState
-from packages.agents.swarn_agents.registry import AGENT_SPECS
 
-async def handle_event_for_replan(deps, state: OrchestratorState) -> dict:
+async def handle_event_for_replan(deps, state: OrchestratorState, agent_specs: dict) -> dict:
     events = state.get("events", [])
     if not events:
         return {}
@@ -12,7 +11,7 @@ async def handle_event_for_replan(deps, state: OrchestratorState) -> dict:
     
     # Filter available agents by what they consume
     available_agents = [
-        name for name, spec in AGENT_SPECS.items()
+        name for name, spec in agent_specs.items()
         if event_type in spec.consumes
     ]
     

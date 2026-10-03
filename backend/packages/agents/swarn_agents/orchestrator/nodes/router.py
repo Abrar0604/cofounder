@@ -1,10 +1,13 @@
 from packages.agents.swarn_agents.orchestrator.state import OrchestratorState
 from packages.decisions.swarn_decisions.definitions.route_supervisor import RouteSupervisorState
-from packages.agents.swarn_agents.registry import AGENT_SPECS
 
-async def choose_next_agent(deps, state: OrchestratorState) -> dict:
-    available_agents = list(AGENT_SPECS.keys())
+async def choose_next_agent(deps, state: OrchestratorState, available_agents: list[str]) -> dict:
     
+    next_agents = state.get("next_agents", [])
+    if next_agents:
+        # If there are queued agents, respect the queue
+        return {"next_agents": next_agents}
+        
     route_state = RouteSupervisorState(
         task=state.get("task", ""),
         active_agent=state.get("active_agent", "none"),
