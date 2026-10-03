@@ -32,5 +32,5 @@ async def score_viability_node(deps, state: AgentState) -> dict:
     
     decision = await deps.decisions.run('score_viability', d7_state)
     
-    events.append({"type": "viability_scored", "payload": {"score": decision.choice}})
+    events.append({"type": "viability_scored", "payload": {"score": decision.action}})
     return {"events": events}

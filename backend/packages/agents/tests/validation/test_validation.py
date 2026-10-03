@@ -5,7 +5,7 @@ from packages.agents.swarn_agents.validation.graph import get_spec
 
 class MockDecisionResult:
     def __init__(self, choice):
-        self.choice = choice
+        self.action = choice
 
 class MockDecisionRuntime:
     async def run(self, *args, **kwargs):

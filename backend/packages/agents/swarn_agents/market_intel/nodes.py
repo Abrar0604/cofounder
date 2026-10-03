@@ -29,5 +29,5 @@ async def run_decision(deps, state: AgentState) -> dict:
     
     decision = await deps.decisions.run('evaluate_market_size', d1_state)
     
-    events.append({"type": "market_size_evaluated", "payload": {"size": decision.choice}})
+    events.append({"type": "market_size_evaluated", "payload": {"size": decision.action}})
     return {"events": events}
