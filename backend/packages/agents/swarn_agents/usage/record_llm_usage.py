@@ -12,9 +12,15 @@ async def record_llm_usage(
     output_tokens: int, 
     run_id: str
 ) -> None:
-    input_price_pm, output_price_pm = PRICES_PER_MILLION.get(model, (0.0, 0.0))
+    if model not in PRICES_PER_MILLION:
+        raise ValueError(f"Pricing not configured for model {model}")
+        
+    input_price_pm, output_price_pm = PRICES_PER_MILLION[model]
     
     cost_usd = (input_tokens / 1_000_000.0) * input_price_pm + (output_tokens / 1_000_000.0) * output_price_pm
+    
+    # Set RLS context
+    await session.execute(text("SELECT set_config('app.current_tenant', :tenant_id, true)"), {"tenant_id": ctx.tenant_id})
     
     stmt = text("""
         INSERT INTO llm_usage (

@@ -4,7 +4,8 @@ from langgraph.store.postgres.aio import AsyncPostgresStore
 from psycopg_pool import AsyncConnectionPool
 
 _pool = None
-_setup_done = False
+_setup_checkpointer_done = False
+_setup_store_done = False
 _lock = asyncio.Lock()
 
 def get_psycopg_conn_string(database_url: str) -> str:
@@ -23,25 +24,25 @@ async def _get_pool(settings):
     return _pool
 
 async def make_checkpointer(settings) -> AsyncPostgresSaver:
-    global _setup_done
+    global _setup_checkpointer_done
     pool = await _get_pool(settings)
     checkpointer = AsyncPostgresSaver(pool)
     
     async with _lock:
-        if not _setup_done:
+        if not _setup_checkpointer_done:
             await checkpointer.setup()
-            _setup_done = True
+            _setup_checkpointer_done = True
             
     return checkpointer
 
 async def make_store(settings) -> AsyncPostgresStore:
-    global _setup_done
+    global _setup_store_done
     pool = await _get_pool(settings)
     store = AsyncPostgresStore(pool)
     
     async with _lock:
-        if not _setup_done:
+        if not _setup_store_done:
             await store.setup()
-            _setup_done = True
+            _setup_store_done = True
             
     return store

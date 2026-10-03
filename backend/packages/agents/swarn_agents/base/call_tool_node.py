@@ -6,13 +6,17 @@ class ToolResult:
     def __init__(self, output: Any):
         self.output = output
 
+import inspect
+
 async def call_tool_with_approval(deps, state, tool_name: str, raw_args: Dict[str, Any]) -> ToolResult:
     ctx = state.get("ctx") # Typically we'd build ctx from state
     # Mocking tenant_session usage
     
     try:
         # Initial execution attempt
-        result = await deps.registry.execute_tool(tool_name, raw_args)
+        result = deps.registry.execute_tool(tool_name, raw_args)
+        if inspect.isawaitable(result):
+            result = await result
         return ToolResult(output=result)
         
     except ApprovalRequired as e:
@@ -24,10 +28,15 @@ async def call_tool_with_approval(deps, state, tool_name: str, raw_args: Dict[st
         if decision != "approved":
             return ToolResult(output={"rejected": True})
             
+        approval_id = resume_val.get("approval_id")
+        
         # Retry with the approval_id
-        result = await deps.registry.execute_tool(
+        # Note: registry.execute_tool signature needs to accept approval_id
+        result = deps.registry.execute_tool(
             tool_name, 
             raw_args, 
-            approval_id=resume_val.get("approval_id")
+            approval_id=approval_id
         )
+        if inspect.isawaitable(result):
+            result = await result
         return ToolResult(output=result)

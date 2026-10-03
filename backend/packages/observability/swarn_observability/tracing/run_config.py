@@ -8,7 +8,7 @@ def run_config(
     ctx, 
     venture_id: str, 
     agent: str, 
-    run_id: str, 
+    thread_id: str, 
     channel: str = 'web', 
     extra_tags: list[str] | None = None
 ) -> dict:
@@ -23,7 +23,7 @@ def run_config(
     
     return {
         "configurable": {
-            "thread_id": run_id,
+            "thread_id": thread_id,
         },
         "tags": tags,
         "metadata": {
@@ -31,7 +31,8 @@ def run_config(
             "venture_id": venture_id,
             "agent": agent,
             "channel": channel,
-            "environment": env
+            "environment": env,
+            "run_id": thread_id  # Keep for backwards compatibility if needed
         },
         "recursion_limit": 40
     }

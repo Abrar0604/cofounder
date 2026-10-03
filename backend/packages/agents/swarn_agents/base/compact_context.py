@@ -98,6 +98,48 @@ async def compact_messages(
             # Keep 'keep', 'other', and low-confidence items
             keep_indices.add(msg_idx)
             
+    # Enforce tool pairs: never leave either side of a completed pair kept alone
+    ai_to_tool_calls = {}
+    tool_call_id_to_ai_idx = {}
+    tool_call_id_to_tool_idx = {}
+
+    for i, msg in enumerate(messages):
+        if getattr(msg, "type", "") == "ai" and hasattr(msg, "tool_calls") and msg.tool_calls:
+            ai_to_tool_calls[i] = [tc.get("id") for tc in msg.tool_calls]
+            for tc_id in ai_to_tool_calls[i]:
+                tool_call_id_to_ai_idx[tc_id] = i
+        
+        if getattr(msg, "type", "") == "tool":
+            tc_id = getattr(msg, "tool_call_id", None)
+            if tc_id:
+                if tc_id not in tool_call_id_to_tool_idx:
+                    tool_call_id_to_tool_idx[tc_id] = []
+                tool_call_id_to_tool_idx[tc_id].append(i)
+
+    changed = True
+    while changed:
+        changed = False
+        new_keeps = set()
+        for i in keep_indices:
+            # If we keep an AI message, keep its tool results
+            if i in ai_to_tool_calls:
+                for tc_id in ai_to_tool_calls[i]:
+                    for t_idx in tool_call_id_to_tool_idx.get(tc_id, []):
+                        if t_idx not in keep_indices and t_idx not in new_keeps:
+                            new_keeps.add(t_idx)
+                            
+            # If we keep a tool message, keep its AI message
+            msg = messages[i]
+            if getattr(msg, "type", "") == "tool":
+                tc_id = getattr(msg, "tool_call_id", None)
+                if tc_id in tool_call_id_to_ai_idx:
+                    ai_idx = tool_call_id_to_ai_idx[tc_id]
+                    if ai_idx not in keep_indices and ai_idx not in new_keeps:
+                        new_keeps.add(ai_idx)
+        if new_keeps:
+            keep_indices.update(new_keeps)
+            changed = True
+            
     # Rebuild messages
     final_messages = [m for i, m in enumerate(messages) if i in keep_indices]
     return final_messages

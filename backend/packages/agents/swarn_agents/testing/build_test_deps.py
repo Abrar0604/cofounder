@@ -1,4 +1,5 @@
 from packages.agents.swarn_agents.base.agent_deps import AgentDeps
+from typing import Any
 
 class FakeModelRouter:
     def __init__(self, scripted_models):
