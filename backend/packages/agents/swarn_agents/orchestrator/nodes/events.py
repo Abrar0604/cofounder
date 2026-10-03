@@ -8,16 +8,24 @@ async def handle_event_for_replan(deps, state: OrchestratorState) -> dict:
         return {}
         
     last_event = events[-1]
+    event_type = last_event.get("type", "unknown")
+    
+    # Filter available agents by what they consume
+    available_agents = [
+        name for name, spec in AGENT_SPECS.items()
+        if event_type in spec.consumes
+    ]
     
     fan_out = FanOutEventState(
-        event_type=last_event.get("type", "unknown"),
+        event_type=event_type,
         event_payload=str(last_event.get("payload", {})),
-        available_agents=list(AGENT_SPECS.keys())
+        available_agents=available_agents
     )
     
     decision = await deps.decisions.run('fan_out_event', fan_out)
     
-    if decision.choice == 'none' or decision.choice not in AGENT_SPECS:
+    # Validate the choice is in the filtered available_agents list
+    if decision.choice == 'none' or decision.choice not in available_agents:
         return {}
         
     # Queue the awakened agent

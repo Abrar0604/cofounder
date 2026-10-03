@@ -72,7 +72,7 @@ async def test_dispatch_agent():
 
 @pytest.mark.asyncio
 async def test_handle_event_for_replan():
-    AGENT_SPECS["validation"] = AgentSpec("validation", frozenset(), frozenset(), frozenset(), lambda d: None)
+    AGENT_SPECS["validation"] = AgentSpec("validation", frozenset(), frozenset(["market_changed"]), frozenset(), lambda d: None)
     
     deps = MockDeps("validation")
     state = {"events": [{"type": "market_changed", "payload": {}}], "next_agents": [], "active_agent": None}
