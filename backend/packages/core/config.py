@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///swarn.db"
     clerk_secret_key: str | None = None
     clerk_publishable_key: str | None = None
+    google_api_key: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

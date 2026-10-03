@@ -17,7 +17,7 @@ class MockDeps:
 
 @pytest.mark.asyncio
 async def test_review_financials():
-    res = await review_financials(MockDeps(), {"venture_id": "test_v"})
+    res = await review_financials(MockDeps(), {"venture_id": "v1"})
     assert res["events"][0]["type"] == "financials_reviewed"
     assert "total_spent" in res["events"][0]["payload"]
     
@@ -39,9 +39,15 @@ async def test_tools():
     spend = await check_spend("v1")
     assert spend["budget"] == 5000.00
     
+    missing_spend = await check_spend("missing")
+    assert "error" in missing_spend
+    
     rev = await simulate_revenue_model({"price": 10, "users": 100, "growth_rate": 1.1})
     assert rev["months"] == 12
     assert rev["final_mrr"] > 1000
+    
+    bad_rev = await simulate_revenue_model({"price": -10, "users": 100, "growth_rate": 1.1})
+    assert "error" in bad_rev
 
 def test_spec():
     spec = get_spec()

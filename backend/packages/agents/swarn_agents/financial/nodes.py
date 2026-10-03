@@ -21,6 +21,9 @@ async def assess_burn(deps, state: AgentState) -> dict:
         return {"events": events}
         
     payload = review_event["payload"]
+    if "error" in payload:
+        events.append({"type": "burn_rate_assessed", "payload": {"status": "unknown"}})
+        return {"events": events}
     d9_state = AssessBurnRateState(
         total_spent=payload.get("total_spent", 0.0),
         budget=payload.get("budget", 0.0),
