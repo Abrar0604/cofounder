@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Home, Inbox, MessageSquare, Settings } from "lucide-react"
 
+import { UserButton } from "@clerk/nextjs"
 import {
   Sidebar,
   SidebarContent,
@@ -8,6 +9,7 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
+  SidebarFooter,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -60,6 +62,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="p-4 border-t border-gray-200">
+        <div className="flex items-center gap-3">
+          <UserButton afterSignOutUrl="/" />
+          <span className="text-sm font-medium">Account</span>
+        </div>
+      </SidebarFooter>
     </Sidebar>
   )
 }
