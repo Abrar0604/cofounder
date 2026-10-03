@@ -19,16 +19,32 @@ class ToolRegistry:
             # Validate against pending approvals
             if self.pending_approvals.get(approval_id) != name:
                 raise ValueError(f"Invalid or mismatched approval_id for tool {name}")
-            # Clear it after successful validation
+            
+            # Temporarily remove from pending to prevent concurrent reuse
             del self.pending_approvals[approval_id]
 
         schema = self.schemas[name]
         try:
             validated_input = schema(**kwargs)
         except ValidationError as e:
+            # Restore approval_id on validation failure so it can be retried
+            if approval_id is not None:
+                self.pending_approvals[approval_id] = name
             raise ValueError(f"Invalid input for tool {name}: {e}")
 
-        # The tool itself might raise ApprovalRequired, at which point the caller 
-        # (call_tool_node) handles it. If the tool needs to register a pending approval,
-        # it should ideally populate self.pending_approvals in the registry.
-        return self.tools[name](**validated_input.model_dump())
+        import inspect
+        call_kwargs = validated_input.model_dump()
+        
+        # Define how the tool observes the approval: pass _approved=True if the tool accepts it
+        sig = inspect.signature(self.tools[name])
+        if approval_id is not None and "_approved" in sig.parameters:
+            call_kwargs["_approved"] = True
+
+        try:
+            result = self.tools[name](**call_kwargs)
+            return result
+        except Exception:
+            # Restore approval_id on execution failure
+            if approval_id is not None:
+                self.pending_approvals[approval_id] = name
+            raise
