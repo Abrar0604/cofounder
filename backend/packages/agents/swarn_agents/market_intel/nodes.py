@@ -8,13 +8,19 @@ async def gather_intel(deps, state: AgentState) -> dict:
     # Minimal logic: search based on task
     results = await search_market_data(task)
     
-    # Store results in events or artifacts
-    return {"events": [{"type": "market_data_gathered", "payload": results}]}
+    events = list(state.get("events", []))
+    events.append({"type": "market_data_gathered", "payload": results})
+    return {"events": events}
 
 async def run_decision(deps, state: AgentState) -> dict:
-    # Run D1 decision
-    events = state.get("events", [])
-    data_summary = str(events[-1].get("payload", "")) if events else "none"
+    events = list(state.get("events", []))
+    data_gathered = next((e for e in reversed(events) if e["type"] == "market_data_gathered"), None)
+    
+    if data_gathered and "error" in data_gathered["payload"]:
+        # Prevent producing market_size_evaluated without market evidence
+        return {"events": events}
+        
+    data_summary = str(data_gathered.get("payload", "")) if data_gathered else "none"
     
     d1_state = EvaluateMarketSizeState(
         market_data_summary=data_summary[:500],
@@ -23,4 +29,5 @@ async def run_decision(deps, state: AgentState) -> dict:
     
     decision = await deps.decisions.run('evaluate_market_size', d1_state)
     
-    return {"events": [{"type": "market_size_evaluated", "payload": {"size": decision.choice}}]}
+    events.append({"type": "market_size_evaluated", "payload": {"size": decision.choice}})
+    return {"events": events}

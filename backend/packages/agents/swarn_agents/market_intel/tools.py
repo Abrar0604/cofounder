@@ -6,8 +6,9 @@ async def search_market_data(query: str) -> Dict[str, Any]:
     """Search for market data using Tavily or fallback APIs."""
     tavily_key = os.getenv("TAVILY_API_KEY")
     if not tavily_key:
-        return {"error": "TAVILY_API_KEY not configured. Mocking response.", "results": [{"title": "Market Trends", "content": f"Mock data for {query}"}]}
-        
+        if os.getenv("APP_ENV") == "test":
+            return {"results": [{"title": "Market Trends", "content": f"Mock data for {query}"}]}
+        return {"error": "unavailable", "message": "TAVILY_API_KEY not configured."}
     async with httpx.AsyncClient() as client:
         try:
             res = await client.post(

@@ -3,6 +3,11 @@ from packages.decisions.swarn_decisions.definitions.route_supervisor import Rout
 
 async def choose_next_agent(deps, state: OrchestratorState, available_agents: list[str]) -> dict:
     
+    next_agents = state.get("next_agents", [])
+    if next_agents:
+        # If there are queued agents, respect the queue
+        return {"next_agents": next_agents}
+        
     route_state = RouteSupervisorState(
         task=state.get("task", ""),
         active_agent=state.get("active_agent", "none"),
