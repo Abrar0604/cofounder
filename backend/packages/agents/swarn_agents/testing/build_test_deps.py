@@ -12,11 +12,15 @@ class FakeModelRouter:
 class FakeDecisionRuntime:
     def __init__(self, script):
         self.script = script or {}
+        self.received_states = []
         
     async def run(self, use_case: str, state: Any):
+        self.received_states.append((use_case, state))
         return self.script.get(use_case)
         
     async def run_batch(self, use_case: str, states: list):
+        for state in states:
+            self.received_states.append((use_case, state))
         return [self.script.get(use_case) for _ in states]
 
 def build_test_deps(
