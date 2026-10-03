@@ -14,6 +14,7 @@ export function ChatWindow() {
   const [input, setInput] = React.useState("")
   const [isTyping, setIsTyping] = React.useState(false)
   const [clientId, setClientId] = React.useState("")
+  const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
   const scrollRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
@@ -82,6 +83,7 @@ export function ChatWindow() {
     e.preventDefault()
     if (!input.trim() || !clientId) return
 
+    setErrorMsg(null)
     const userMessage: MessageProps = {
       id: Date.now().toString(),
       role: "user",
@@ -95,7 +97,7 @@ export function ChatWindow() {
     setIsTyping(true)
 
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/chat/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/chat/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -105,8 +107,13 @@ export function ChatWindow() {
           message: currentInput
         })
       })
+      
+      if (!response.ok) {
+        throw new Error(`Failed to send message: ${response.statusText}`)
+      }
     } catch (error) {
       console.error("Chat send error:", error)
+      setErrorMsg("Unable to send message. Please try again.")
       setIsTyping(false)
     }
   }
@@ -149,6 +156,11 @@ export function ChatWindow() {
             Send
           </Button>
         </form>
+        {errorMsg && (
+          <div className="text-sm text-red-500 mt-2">
+            {errorMsg}
+          </div>
+        )}
       </div>
     </div>
   )

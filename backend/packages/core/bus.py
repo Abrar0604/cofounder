@@ -17,6 +17,12 @@ class EventBus:
         pubsub = self.redis.pubsub()
         await pubsub.subscribe(channel)
         
+        # Wait for subscription confirmation
+        while True:
+            msg = await pubsub.get_message(ignore_subscribe_messages=False, timeout=1.0)
+            if msg and msg.get("type") == "subscribe":
+                break
+                
         try:
             async for message in pubsub.listen():
                 if message["type"] == "message":
