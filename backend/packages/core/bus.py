@@ -23,6 +23,8 @@ class EventBus:
             if msg and msg.get("type") == "subscribe":
                 break
                 
+        yield {"type": "connected", "payload": {}}
+                
         try:
             async for message in pubsub.listen():
                 if message["type"] == "message":

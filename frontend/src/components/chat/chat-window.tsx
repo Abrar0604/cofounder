@@ -14,6 +14,7 @@ export function ChatWindow() {
   const [input, setInput] = React.useState("")
   const [isTyping, setIsTyping] = React.useState(false)
   const [clientId, setClientId] = React.useState("")
+  const [isReady, setIsReady] = React.useState(false)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
   const scrollRef = React.useRef<HTMLDivElement>(null)
 
@@ -26,6 +27,7 @@ export function ChatWindow() {
   React.useEffect(() => {
     if (!clientId) return;
     
+    setIsReady(false)
     // Connect to SSE stream
     const eventSource = new EventSource(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/stream/${clientId}`)
     
@@ -33,7 +35,10 @@ export function ChatWindow() {
       try {
         const data = JSON.parse(event.data)
         
-        if (data.type === "agent_thought" || data.type === "agent_action") {
+        if (data.type === "connected") {
+          setIsReady(true)
+        }
+        else if (data.type === "agent_thought" || data.type === "agent_action") {
           setIsTyping(true)
           // Could display this somewhere, for now we just show typing indicator
         }
@@ -81,7 +86,7 @@ export function ChatWindow() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || !clientId) return
+    if (!input.trim() || !clientId || !isReady) return
 
     setErrorMsg(null)
     const userMessage: MessageProps = {
@@ -143,13 +148,13 @@ export function ChatWindow() {
           <Input 
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..." 
+            placeholder={isReady ? "Type your message..." : "Connecting to Swarn..."}
             className="rounded-none border-gray-300 focus-visible:ring-0 focus-visible:border-black"
-            disabled={isTyping}
+            disabled={isTyping || !isReady}
           />
           <Button 
             type="submit" 
-            disabled={isTyping || !input.trim()}
+            disabled={isTyping || !isReady || !input.trim()}
             className="rounded-none"
           >
             <SendHorizontal className="h-4 w-4 mr-2" />
