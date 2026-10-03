@@ -12,16 +12,17 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 
 class MockSettings:
-    strong_model = "claude-3-5-sonnet-20240620"
-    cheap_model = "claude-3-haiku-20240307"
+    strong_model = "gemini-1.5-pro"
+    cheap_model = "gemini-1.5-flash"
+    google_api_key = "dummy_key"
 
 def test_model_router():
     router = ModelRouter(MockSettings())
     strong = router.get_model('strong')
-    assert strong.model == "claude-3-5-sonnet-20240620"
+    assert strong.model == "gemini-1.5-pro"
     
     cheap = router.get_model('cheap')
-    assert cheap.model == "claude-3-haiku-20240307"
+    assert cheap.model == "gemini-1.5-flash"
     
     with pytest.raises(PolicyViolation):
         router.get_model('unknown')

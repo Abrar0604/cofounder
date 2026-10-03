@@ -32,5 +32,5 @@ async def assess_burn(deps, state: AgentState) -> dict:
     
     decision = await deps.decisions.run('assess_burn_rate', d9_state)
     
-    events.append({"type": "burn_rate_assessed", "payload": {"status": decision.choice}})
+    events.append({"type": "burn_rate_assessed", "payload": {"status": decision.action}})
     return {"events": events}
