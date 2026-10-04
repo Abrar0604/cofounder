@@ -84,6 +84,15 @@ async def process_task(ctx, payload: dict):
         response_text = result.get("summary", "Done processing.")
     except Exception as e:
         response_text = f"Orchestrator error: {str(e)}"
+        
+    if isinstance(response_text, list):
+        # Gemini sometimes returns a list of content blocks
+        if len(response_text) > 0 and isinstance(response_text[0], dict) and "text" in response_text[0]:
+            response_text = response_text[0]["text"]
+        else:
+            response_text = str(response_text)
+    elif not isinstance(response_text, str):
+        response_text = str(response_text)
     
     tokens = response_text.split(" ")
     
