@@ -12,12 +12,31 @@ from contextlib import asynccontextmanager
 from arq import create_pool
 from arq.connections import RedisSettings
 
+import redis.asyncio as redis
+
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+from packages.agents.orchestrator.graph import create_orchestrator_graph
+from packages.approvals.service import ApprovalService
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    app.state.redis_client = redis.from_url(redis_url)
     app.state.arq_pool = await create_pool(RedisSettings.from_dsn(redis_url))
+    
+    # Initialize shared checkpointer
+    app.state.checkpointer = AsyncSqliteSaver.from_conn_string("checkpoints.db")
+    await app.state.checkpointer.__aenter__()
+    await app.state.checkpointer.setup()
+    
+    # Initialize graph and approval service for the API
+    app.state.shared_graph = create_orchestrator_graph(checkpointer=app.state.checkpointer)
+    app.state.approval_service = ApprovalService(app.state.shared_graph)
+    
     yield
+    await app.state.checkpointer.__aexit__(None, None, None)
     await app.state.arq_pool.close()
+    await app.state.redis_client.aclose()
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
 

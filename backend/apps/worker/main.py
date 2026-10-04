@@ -7,14 +7,21 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
 async def startup(ctx):
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     ctx["bus"] = EventBus(redis_url)
+    ctx["checkpointer"] = AsyncSqliteSaver.from_conn_string("checkpoints.db")
+    await ctx["checkpointer"].__aenter__()
+    await ctx["checkpointer"].setup()
 
 async def shutdown(ctx):
     bus = ctx.get("bus")
     if bus:
         await bus.redis.close()
+    if "checkpointer" in ctx:
+        await ctx["checkpointer"].__aexit__(None, None, None)
 
 async def process_task(ctx, payload: dict):
     job_id = ctx.get("job_id", "unknown")
@@ -33,7 +40,6 @@ async def process_task(ctx, payload: dict):
         from packages.brain.services.brain_service import BrainService
         from packages.agents.swarn_agents.registry import AGENT_SPECS
         from packages.agents.swarn_agents.orchestrator.graph import build_orchestrator_graph
-        from langgraph.checkpoint.memory import MemorySaver
         
         # Instantiate real dependencies
         models = ModelRouter(settings=None)
@@ -53,7 +59,7 @@ async def process_task(ctx, payload: dict):
                 
         decisions = DecisionRuntimeWrapper(jev_client)
         store = BrainService()
-        checkpointer = MemorySaver()
+        checkpointer = ctx["checkpointer"]
         
         # --- NEW: Extract Venture Info and Create it automatically ---
         import json
@@ -67,16 +73,22 @@ async def process_task(ctx, payload: dict):
         # Check existing using shared Redis store
         existing = await bus.redis.hget("swarn_ventures", venture_id)
         if not existing:
-            extract_prompt = f"Extract a short 2-3 word project name from this prompt. If it's about coffee, call it 'Coffee Project'. If unknown, call it 'New Venture'. Prompt: {user_message}"
-            name_res = await fast_llm.ainvoke(extract_prompt)
-            venture_name = name_res.content.strip().replace("'", "").replace('"', '')
+            venture_name = "New Venture"
+            try:
+                extract_prompt = f"Extract a short 2-3 word project name from this prompt. If it's about coffee, call it 'Coffee Project'. If unknown, call it 'New Venture'. Prompt: {user_message}"
+                name_res = await fast_llm.ainvoke(extract_prompt)
+                if name_res and name_res.content and isinstance(name_res.content, str) and name_res.content.strip():
+                    venture_name = name_res.content.strip().replace("'", "").replace('"', '')
+            except Exception as llm_err:
+                print(f"Name extraction failed: {llm_err}")
             
             venture_data = {
                 "id": venture_id,
                 "name": venture_name,
                 "status": "Inception",
                 "budget": "TBD",
-                "progress": "0%"
+                "progress": "0%",
+                "owner_id": payload.get("user_id", "u1")
             }
             # Save to shared store
             await bus.redis.hset("swarn_ventures", venture_id, json.dumps(venture_data))
@@ -104,7 +116,7 @@ async def process_task(ctx, payload: dict):
         
         state = {
             "messages": [("human", user_message)],
-            "tenant_id": "t1", "venture_id": "v1", "user_id": "u1", "role": "admin",
+            "tenant_id": "t1", "venture_id": venture_id, "user_id": payload.get("user_id", "u1"), "role": "admin",
             "run_id": job_id, "agent": "orchestrator", "task": "",
             "artifacts": [], "events": [], "needs_human": False, "error": None,
             "next_agents": [], "agent_hops": 0

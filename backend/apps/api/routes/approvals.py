@@ -1,19 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from typing import Any, Dict
 from packages.approvals.service import ApprovalService
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from packages.agents.orchestrator.graph import create_orchestrator_graph
+import aiosqlite
 
 router = APIRouter(prefix="/approvals", tags=["approvals"])
 
-# Shared checkpointer and graph
-shared_checkpointer = MemorySaver()
-shared_graph = create_orchestrator_graph(checkpointer=shared_checkpointer)
-shared_approval_service = ApprovalService(shared_graph)
-
-def get_approval_service() -> ApprovalService:
-    return shared_approval_service
+def get_approval_service(request: Request) -> ApprovalService:
+    return request.app.state.approval_service
 
 class ApprovalRequest(BaseModel):
     data: Dict[str, Any]
@@ -22,9 +18,15 @@ class RejectionRequest(BaseModel):
     reason: str
 
 @router.get("/")
-async def list_approvals(service: ApprovalService = Depends(get_approval_service)) -> list[dict]:
-    # Extract unique thread_ids from the MemorySaver storage
-    thread_ids = set([key[0] for key in shared_checkpointer.storage.keys()])
+async def list_approvals(request: Request, service: ApprovalService = Depends(get_approval_service)) -> list[dict]:
+    checkpointer = request.app.state.checkpointer
+    
+    # Extract unique thread_ids from the checkpointer
+    thread_ids = set()
+    async for c in checkpointer.alist(None):
+        t = c.config.get("configurable", {}).get("thread_id")
+        if t:
+            thread_ids.add(t)
     
     pending = []
     for t_id in thread_ids:

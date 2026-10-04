@@ -38,6 +38,11 @@ export function ChatWindow() {
     }
   }, [messages])
 
+  const activeClientIdRef = React.useRef(clientId)
+  React.useEffect(() => {
+    activeClientIdRef.current = clientId
+  }, [clientId])
+
   React.useEffect(() => {
     if (!clientId) return;
     
@@ -46,6 +51,7 @@ export function ChatWindow() {
     const eventSource = new EventSource(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/stream/${clientId}`)
     
     eventSource.onmessage = (event) => {
+      if (clientId !== activeClientIdRef.current) return;
       try {
         const data = JSON.parse(event.data)
         
