@@ -12,16 +12,16 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 async def startup(ctx):
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     ctx["bus"] = EventBus(redis_url)
-    ctx["checkpointer"] = AsyncSqliteSaver.from_conn_string("checkpoints.db")
-    await ctx["checkpointer"].__aenter__()
+    ctx["checkpointer_cm"] = AsyncSqliteSaver.from_conn_string("checkpoints.db")
+    ctx["checkpointer"] = await ctx["checkpointer_cm"].__aenter__()
     await ctx["checkpointer"].setup()
 
 async def shutdown(ctx):
     bus = ctx.get("bus")
     if bus:
         await bus.redis.close()
-    if "checkpointer" in ctx:
-        await ctx["checkpointer"].__aexit__(None, None, None)
+    if "checkpointer_cm" in ctx:
+        await ctx["checkpointer_cm"].__aexit__(None, None, None)
 
 async def process_task(ctx, payload: dict):
     job_id = ctx.get("job_id", "unknown")

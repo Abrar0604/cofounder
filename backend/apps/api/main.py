@@ -25,8 +25,8 @@ async def lifespan(app: FastAPI):
     app.state.arq_pool = await create_pool(RedisSettings.from_dsn(redis_url))
     
     # Initialize shared checkpointer
-    app.state.checkpointer = AsyncSqliteSaver.from_conn_string("checkpoints.db")
-    await app.state.checkpointer.__aenter__()
+    app.state.checkpointer_cm = AsyncSqliteSaver.from_conn_string("checkpoints.db")
+    app.state.checkpointer = await app.state.checkpointer_cm.__aenter__()
     await app.state.checkpointer.setup()
     
     # Initialize graph and approval service for the API
@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
     app.state.approval_service = ApprovalService(app.state.shared_graph)
     
     yield
-    await app.state.checkpointer.__aexit__(None, None, None)
+    await app.state.checkpointer_cm.__aexit__(None, None, None)
     await app.state.arq_pool.close()
     await app.state.redis_client.aclose()
 
