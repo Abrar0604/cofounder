@@ -7,9 +7,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Note: In a real system, you'd wire up the real AgentDeps here.
-# For now, we mock the dependency injection just to run the worker.
-
 async def startup(ctx):
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     ctx["bus"] = EventBus(redis_url)
@@ -25,20 +22,68 @@ async def process_task(ctx, payload: dict):
     
     bus = ctx["bus"]
     client_id = payload.get("client_id", "default")
+    user_message = payload.get("message", "")
     
-    await bus.publish(client_id, "agent_thought", {"text": "Processing your request..."})
-    await asyncio.sleep(1)
-    await bus.publish(client_id, "agent_action", {"text": "Invoking Orchestrator..."})
-    await asyncio.sleep(1)
+    await bus.publish(client_id, "agent_thought", {"text": "Initializing Orchestrator and JevClient..."})
     
     try:
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        llm = ChatGoogleGenerativeAI(model="gemini-3.8-flash")
-        prompt = f"The user says: {payload.get('message', '')}. Please provide a helpful response as Swarn AI, an intelligent autonomous agent managing their venture. Be concise."
-        res = await llm.ainvoke(prompt)
-        response_text = res.content
+        from packages.agents.swarn_agents.base.agent_deps import AgentDeps
+        from packages.agents.swarn_agents.models.model_router import ModelRouter
+        from packages.decisions.adapters.jev_client import JevClient
+        from packages.brain.services.brain_service import BrainService
+        from packages.agents.swarn_agents.registry import AGENT_SPECS
+        from packages.agents.swarn_agents.orchestrator.graph import build_orchestrator_graph
+        from langgraph.checkpoint.memory import MemorySaver
+        
+        # Instantiate real dependencies
+        models = ModelRouter(settings=None)
+        jev_client = JevClient()
+        
+        class DecisionRuntimeWrapper:
+            def __init__(self, model):
+                self.model = model
+            async def run(self, use_case: str, state_obj) -> dict:
+                from packages.decisions.ports import Question
+                if hasattr(state_obj, "__dict__"):
+                    context = state_obj.__dict__
+                else:
+                    context = dict(state_obj)
+                q = Question(id=use_case, context=context, metadata={})
+                return await self.model.evaluate(q)
+                
+        decisions = DecisionRuntimeWrapper(jev_client)
+        store = BrainService()
+        checkpointer = MemorySaver()
+        
+        deps = AgentDeps(
+            engine=None,
+            redis=None,
+            settings=None,
+            registry=None,
+            policies=None,
+            decisions=decisions,
+            models=models,
+            checkpointer=checkpointer,
+            store=store
+        )
+        
+        graph = build_orchestrator_graph(deps, AGENT_SPECS)
+        
+        await bus.publish(client_id, "agent_action", {"text": "Routing message through LangGraph Orchestrator..."})
+        
+        state = {
+            "messages": [("human", user_message)],
+            "tenant_id": "t1", "venture_id": "v1", "user_id": "u1", "role": "admin",
+            "run_id": job_id, "agent": "orchestrator", "task": "",
+            "artifacts": [], "events": [], "needs_human": False, "error": None,
+            "next_agents": [], "agent_hops": 0
+        }
+        
+        result = await graph.ainvoke(state, config={"configurable": {"thread_id": client_id}})
+        
+        response_text = result.get("summary", "Done processing.")
     except Exception as e:
-        response_text = f"I have successfully received your request, but I encountered an error connecting to the LLM (Ensure GOOGLE_API_KEY is set). Error: {str(e)}"
+        response_text = f"Orchestrator error: {str(e)}"
     
     tokens = response_text.split(" ")
     
