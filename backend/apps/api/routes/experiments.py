@@ -1,18 +1,18 @@
-from fastapi import APIRouter, HTTPException
-from packages.core.experiments import ExperimentAssignment
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, Query
+from packages.core.experiments import ExperimentService
+from typing import Dict
 
-router = APIRouter(prefix="/experiments", tags=["experiments"])
-assigner = ExperimentAssignment()
+router = APIRouter(prefix="/v1/experiments", tags=["experiments"])
 
-class AssignmentRequest(BaseModel):
-    user_id: str
-    experiment_id: str
+def get_experiment_service():
+    return ExperimentService()
 
-@router.post("/assign")
-async def get_assignment(req: AssignmentRequest):
-    try:
-        bucket = assigner.assign_user(req.user_id, req.experiment_id)
-        return {"user_id": req.user_id, "experiment_id": req.experiment_id, "bucket": bucket}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@router.get("/assignments")
+async def get_user_assignments(
+    user_id: str = Query(..., description="The ID of the user"),
+    service: ExperimentService = Depends(get_experiment_service)
+) -> Dict[str, str]:
+    """
+    Get all active experiment variant assignments for a given user.
+    """
+    return service.get_all_assignments_for_user(user_id)

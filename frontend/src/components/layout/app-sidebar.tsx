@@ -15,6 +15,9 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
+import { useExperiment } from "@/components/experiments/variant-provider"
+import { Badge } from "@/components/ui/badge"
+
 const data = {
   navMain: [
     {
@@ -36,11 +39,16 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const uiExperiment = useExperiment('ui_redesign_q4')
+
   return (
     <Sidebar {...props}>
       <SidebarHeader>
-        <div className="flex h-12 items-center px-4 font-bold tracking-tight">
+        <div className="flex h-12 items-center px-4 font-bold tracking-tight gap-2">
           Swarn
+          {uiExperiment === 'variant_a' && (
+             <Badge variant="secondary" className="text-[10px] h-5">NEW</Badge>
+          )}
         </div>
       </SidebarHeader>
       <SidebarContent>
