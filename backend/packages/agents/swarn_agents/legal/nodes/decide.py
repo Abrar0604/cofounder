@@ -17,7 +17,7 @@ async def answer_or_abstain(deps, state: AgentState) -> dict:
     doc_infos = [DocumentInfo(content=d["content"], citation=d["citation"]) for d in docs]
     
     d12_state = AnswerOrAbstainState(
-        task=state.get("task", ""),
+        task=state.get("request_text") or state.get("task", ""),
         documents=doc_infos
     )
     

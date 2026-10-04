@@ -3,7 +3,7 @@ from packages.rag.retriever import get_legal_vectorstore
 import os
 
 async def retrieve_statutes(deps, state: AgentState) -> dict:
-    query = state.get("task", "")
+    query = state.get("request_text") or state.get("task", "")
     events = list(state.get("events", []))
     
     docs = []
