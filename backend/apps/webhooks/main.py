@@ -25,7 +25,8 @@ async def meta_challenge(request: Request):
     token = request.query_params.get("hub.verify_token")
     challenge = request.query_params.get("hub.challenge")
     
-    if mode == "subscribe" and token == os.getenv("META_VERIFY_TOKEN"):
+    env_token = os.getenv("META_VERIFY_TOKEN")
+    if mode == "subscribe" and token and env_token and token == env_token:
         from fastapi.responses import PlainTextResponse
         return PlainTextResponse(content=challenge)
     raise HTTPException(status_code=403, detail="Invalid token")
