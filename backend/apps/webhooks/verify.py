@@ -5,8 +5,11 @@ import time
 from fastapi import HTTPException, Request
 
 # We will load from env directly or through settings
-META_SECRET = os.getenv("META_WEBHOOK_SECRET", "dummy_meta")
-STRIPE_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "dummy_stripe")
+META_SECRET = os.getenv("META_WEBHOOK_SECRET")
+STRIPE_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+
+if not META_SECRET or not STRIPE_SECRET:
+    raise RuntimeError("META_WEBHOOK_SECRET and STRIPE_WEBHOOK_SECRET must be set in the environment.")
 
 async def verify_meta_signature(request: Request):
     signature = request.headers.get("X-Hub-Signature-256")

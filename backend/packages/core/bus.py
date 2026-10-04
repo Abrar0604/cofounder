@@ -6,12 +6,12 @@ class EventBus:
     def __init__(self, redis_url: str = "redis://localhost:6379/0"):
         self.redis = redis.from_url(redis_url)
         
-    async def publish(self, channel: str, event_type: str, payload: Dict[str, Any]):
+    async def publish(self, channel: str, event_type: str, payload: Dict[str, Any]) -> int:
         message = {
             "type": event_type,
             "payload": payload
         }
-        await self.redis.publish(channel, json.dumps(message))
+        return await self.redis.publish(channel, json.dumps(message))
         
     async def subscribe(self, channel: str) -> AsyncGenerator[Dict[str, Any], None]:
         pubsub = self.redis.pubsub()

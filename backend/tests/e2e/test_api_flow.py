@@ -2,6 +2,11 @@ import pytest
 from httpx import AsyncClient, ASGITransport
 import hmac
 import hashlib
+import os
+
+os.environ["META_WEBHOOK_SECRET"] = "dummy_meta"
+os.environ["STRIPE_WEBHOOK_SECRET"] = "dummy_stripe"
+
 from apps.webhooks.main import app as webhook_app
 from apps.webhooks.verify import META_SECRET
 from apps.api.routes.approvals import router as approvals_router
