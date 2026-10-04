@@ -8,21 +8,34 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { SendHorizontal } from "lucide-react"
 
 export function ChatWindow() {
-  const [messages, setMessages] = React.useState<MessageProps[]>([
-    { id: "init", role: "assistant", content: "Hello, I am Swarn AI. How can I help you today?" }
-  ])
+  const [messages, setMessages] = React.useState<MessageProps[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("swarn_chat_messages")
+      if (saved) return JSON.parse(saved)
+    }
+    return [{ id: "init", role: "assistant", content: "Hello, I am Swarn AI. How can I help you today?" }]
+  })
   const [input, setInput] = React.useState("")
   const [isTyping, setIsTyping] = React.useState(false)
-  const [clientId, setClientId] = React.useState("")
+  const [clientId, setClientId] = React.useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("swarn_chat_client_id")
+      if (saved) return saved
+      const newId = "client_" + Math.random().toString(36).substring(7)
+      sessionStorage.setItem("swarn_chat_client_id", newId)
+      return newId
+    }
+    return ""
+  })
   const [isReady, setIsReady] = React.useState(false)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
   const scrollRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
-    // Generate a unique client id on mount
-    const id = "client_" + Math.random().toString(36).substring(7)
-    setClientId(id)
-  }, [])
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("swarn_chat_messages", JSON.stringify(messages))
+    }
+  }, [messages])
 
   React.useEffect(() => {
     if (!clientId) return;
