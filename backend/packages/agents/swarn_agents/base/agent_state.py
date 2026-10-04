@@ -17,6 +17,7 @@ class AgentState(TypedDict):
     run_id: str
     agent: str
     task: str
+    request_text: Optional[str]
     artifacts: list[str]
     events: list[dict]
     needs_human: bool
