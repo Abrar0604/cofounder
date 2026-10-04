@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react"
-import { Home, Inbox, MessageSquare, Settings } from "lucide-react"
+import { Home, Inbox, MessageSquare, Plus, CheckSquare } from "lucide-react"
+import { useParams, useRouter } from "next/navigation"
 
 import { UserButton } from "@clerk/nextjs"
 import {
@@ -16,32 +17,17 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
 
 import { useExperiment } from "@/components/experiments/variant-provider"
 import { Badge } from "@/components/ui/badge"
 
-const data = {
-  navMain: [
-    {
-      title: "Venture Dashboard",
-      url: "/dashboard",
-      icon: Home,
-    },
-    {
-      title: "Approvals",
-      url: "/dashboard/approvals",
-      icon: Inbox,
-    },
-    {
-      title: "Chat",
-      url: "/dashboard/chat",
-      icon: MessageSquare,
-    },
-  ],
-}
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const uiExperiment = useExperiment('ui_redesign_q4')
+  const params = useParams()
+  const router = useRouter()
+  
+  const startupId = params?.startupId as string | undefined
 
   return (
     <Sidebar {...props}>
@@ -54,23 +40,88 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Application</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {data.navMain.map((item) => (
-                <SidebarMenuItem key={item.title}>
+        {startupId ? (
+          <>
+            <SidebarGroup>
+              <SidebarGroupLabel>Venture Workspace</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <div className="px-4 py-2 text-sm">
+                  <div className="font-semibold text-gray-900 break-words mb-2">{startupId}</div>
+                  <div className="text-gray-500 text-xs">Active Approvals: 0</div>
+                  <div className="text-gray-500 text-xs">Progress: In Progress</div>
+                </div>
+              </SidebarGroupContent>
+            </SidebarGroup>
+            
+            <SidebarGroup>
+              <SidebarGroupLabel>Actions</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton render={
+                      <a href={`/dashboard/${startupId}`}>
+                        <MessageSquare />
+                        <span>Workspace Chat</span>
+                      </a>
+                    } />
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton render={
+                      <a href="/dashboard">
+                        <Home />
+                        <span>All Ventures</span>
+                      </a>
+                    } />
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        ) : (
+          <SidebarGroup>
+            <SidebarGroupLabel>Overview</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
                   <SidebarMenuButton render={
-                    <a href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
+                    <a href="/dashboard">
+                      <Home />
+                      <span>Venture Dashboard</span>
                     </a>
                   } />
                 </SidebarMenuItem>
-              ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Global</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton render={
+                  <a href="/dashboard/approvals">
+                    <Inbox />
+                    <span>Global Approvals</span>
+                  </a>
+                } />
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton render={
+                  <button onClick={() => {
+                    const newId = "client_" + Math.random().toString(36).substring(7)
+                    router.push(`/dashboard/${newId}`)
+                  }} className="w-full text-left">
+                    <Plus />
+                    <span>New Startup</span>
+                  </button>
+                } />
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
       </SidebarContent>
       <SidebarFooter className="p-4 border-t border-gray-200">
         <div className="flex items-center gap-3">

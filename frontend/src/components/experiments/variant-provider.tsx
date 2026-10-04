@@ -19,7 +19,7 @@ export function VariantProvider({ children }: { children: React.ReactNode }) {
     async function fetchAssignments() {
       if (!isLoaded) return;
       
-      let userId = user?.id;
+      let userId: string | null | undefined = user?.id;
       if (!userId) {
         userId = localStorage.getItem("ab-anon-id");
         if (!userId) {
