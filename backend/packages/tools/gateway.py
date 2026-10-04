@@ -26,10 +26,8 @@ class ToolGateway:
                 # Apply Threshold Policy (AUTO, CONFIRM, ESCALATE)
                 policy_action = apply_threshold(decision, auto_threshold=0.9, confirm_threshold=0.7)
                 
-                if policy_action == "ESCALATE":
+                if policy_action in ("ESCALATE", "CONFIRM"):
                     requires_approval = True
-                elif policy_action == "AUTO":
-                    requires_approval = False
                     
             if requires_approval:
                 # Suspend execution until approved

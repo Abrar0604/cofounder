@@ -19,10 +19,18 @@ export function VariantProvider({ children }: { children: React.ReactNode }) {
     async function fetchAssignments() {
       if (!isLoaded) return;
       
-      const userId = user?.id || "anonymous_" + Math.random().toString(36).substring(7);
+      let userId = user?.id;
+      if (!userId) {
+        userId = localStorage.getItem("ab-anon-id");
+        if (!userId) {
+          userId = "anonymous_" + Math.random().toString(36).substring(7);
+          localStorage.setItem("ab-anon-id", userId);
+        }
+      }
       
       try {
-        const response = await fetch(`http://localhost:8000/v1/experiments/assignments?user_id=${userId}`);
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const response = await fetch(`${baseUrl}/v1/experiments/assignments?user_id=${encodeURIComponent(userId as string)}`);
         if (response.ok) {
           const data = await response.json();
           setAssignments(data);
