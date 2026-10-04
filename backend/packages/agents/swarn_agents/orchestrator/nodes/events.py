@@ -24,12 +24,12 @@ async def handle_event_for_replan(deps, state: OrchestratorState, agent_specs: d
     decision = await deps.decisions.run('fan_out_event', fan_out)
     
     # Validate the choice is in the filtered available_agents list
-    if decision.choice == 'none' or decision.choice not in available_agents:
+    if not decision or decision.action == 'none' or decision.action not in available_agents:
         return {}
         
     # Queue the awakened agent
     next_agents = state.get("next_agents", [])
-    if decision.choice not in next_agents and decision.choice != state.get("active_agent"):
-        next_agents.append(decision.choice)
+    if decision.action not in next_agents and decision.action != state.get("active_agent"):
+        next_agents.append(decision.action)
         
     return {"next_agents": next_agents}

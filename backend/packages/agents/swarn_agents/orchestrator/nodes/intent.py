@@ -19,5 +19,4 @@ async def classify_intent(deps, state: OrchestratorState) -> dict:
     
     decision = await deps.decisions.run('founder_intent', intent_state)
     
-    # Store the mapped intent inside the state's task or return it
-    return {"task": decision.choice, "request_text": content}
+    return {"task": decision.action, "request_text": content}
