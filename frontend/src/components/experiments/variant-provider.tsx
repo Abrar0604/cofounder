@@ -1,43 +1,68 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { useUser } from "@clerk/nextjs";
 
 type VariantContextType = {
-  variant: string;
-  setVariant: (variant: string) => void;
+  assignments: Record<string, string>;
+  loading: boolean;
 };
 
 const VariantContext = createContext<VariantContextType | undefined>(undefined);
 
 export function VariantProvider({ children }: { children: React.ReactNode }) {
-  const [variant, setVariant] = useState<string>("control");
+  const [assignments, setAssignments] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const { user, isLoaded } = useUser();
 
   useEffect(() => {
-    try {
-      const storedVariant = localStorage.getItem("ab-variant");
-      if (storedVariant) {
-        setVariant(storedVariant);
-      } else {
-        const newVariant = Math.random() > 0.5 ? "experiment" : "control";
-        setVariant(newVariant);
-        localStorage.setItem("ab-variant", newVariant);
+    async function fetchAssignments() {
+      if (!isLoaded) return;
+      
+      let userId = user?.id;
+      if (!userId) {
+        userId = localStorage.getItem("ab-anon-id");
+        if (!userId) {
+          userId = "anonymous_" + Math.random().toString(36).substring(7);
+          localStorage.setItem("ab-anon-id", userId);
+        }
       }
-    } catch (e) {
-      setVariant("control");
+      
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+        const response = await fetch(`${baseUrl}/v1/experiments/assignments?user_id=${encodeURIComponent(userId as string)}`);
+        if (response.ok) {
+          const data = await response.json();
+          setAssignments(data);
+        } else {
+          console.error("Failed to fetch experiment assignments");
+        }
+      } catch (e) {
+        console.error("Error fetching experiment assignments:", e);
+      } finally {
+        setLoading(false);
+      }
     }
-  }, []);
+    
+    fetchAssignments();
+  }, [isLoaded, user?.id]);
 
   return (
-    <VariantContext.Provider value={{ variant, setVariant }}>
+    <VariantContext.Provider value={{ assignments, loading }}>
       {children}
     </VariantContext.Provider>
   );
 }
 
-export function useVariant() {
+export function useExperiment(experimentId: string, defaultVariant: string = "control") {
   const context = useContext(VariantContext);
   if (context === undefined) {
-    throw new Error("useVariant must be used within a VariantProvider");
+    throw new Error("useExperiment must be used within a VariantProvider");
   }
-  return context;
+  
+  if (context.loading) {
+    return defaultVariant;
+  }
+  
+  return context.assignments[experimentId] || defaultVariant;
 }

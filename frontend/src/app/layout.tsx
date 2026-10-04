@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs'
+import { SuppressWarning } from "@/components/suppress-warning";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { VariantProvider } from "@/components/experiments/variant-provider";
 import "./globals.css";
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         style={{ "--font-sans": "var(--font-inter)" } as React.CSSProperties}
       >
         <body className="min-h-full flex flex-col font-sans">
+          <SuppressWarning />
           <VariantProvider>
             <TooltipProvider>{children}</TooltipProvider>
           </VariantProvider>

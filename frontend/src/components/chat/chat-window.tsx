@@ -8,30 +8,50 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { SendHorizontal } from "lucide-react"
 
 export function ChatWindow() {
-  const [messages, setMessages] = React.useState<MessageProps[]>([
-    { id: "init", role: "assistant", content: "Hello, I am Swarn AI. How can I help you today?" }
-  ])
+  const [isMounted, setIsMounted] = React.useState(false)
+  const [messages, setMessages] = React.useState<MessageProps[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("swarn_chat_messages")
+      if (saved) return JSON.parse(saved)
+    }
+    return [{ id: "init", role: "assistant", content: "Hello, I am Swarn AI. How can I help you today?" }]
+  })
   const [input, setInput] = React.useState("")
   const [isTyping, setIsTyping] = React.useState(false)
-  const [clientId, setClientId] = React.useState("")
+  const [clientId, setClientId] = React.useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("swarn_chat_client_id")
+      if (saved) return saved
+      const newId = "client_" + Math.random().toString(36).substring(7)
+      sessionStorage.setItem("swarn_chat_client_id", newId)
+      return newId
+    }
+    return ""
+  })
   const [isReady, setIsReady] = React.useState(false)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
   const scrollRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
-    // Generate a unique client id on mount
-    const id = "client_" + Math.random().toString(36).substring(7)
-    setClientId(id)
-  }, [])
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("swarn_chat_messages", JSON.stringify(messages))
+    }
+  }, [messages])
+
+  const activeClientIdRef = React.useRef(clientId)
+  React.useEffect(() => {
+    activeClientIdRef.current = clientId
+  }, [clientId])
 
   React.useEffect(() => {
     if (!clientId) return;
     
     setIsReady(false)
     // Connect to SSE stream
-    const eventSource = new EventSource(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/stream/${clientId}`)
+    const eventSource = new EventSource(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/stream/${clientId}`)
     
     eventSource.onmessage = (event) => {
+      if (clientId !== activeClientIdRef.current) return;
       try {
         const data = JSON.parse(event.data)
         
@@ -107,7 +127,7 @@ export function ChatWindow() {
     setIsTyping(true)
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/chat/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/chat/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -128,10 +148,29 @@ export function ChatWindow() {
     }
   }
 
+  React.useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  if (!isMounted) return <div className="flex h-full items-center justify-center border border-gray-200 bg-white">Loading...</div>
+
+  const startNewChat = () => {
+    const newId = "client_" + Math.random().toString(36).substring(7)
+    setClientId(newId)
+    setIsTyping(false)
+    const initMsg = [{ id: "init", role: "assistant", content: "Hello, I am Swarn AI. How can I help you today?" }]
+    setMessages(initMsg)
+    sessionStorage.setItem("swarn_chat_client_id", newId)
+    sessionStorage.setItem("swarn_chat_messages", JSON.stringify(initMsg))
+  }
+
   return (
     <div className="flex h-full flex-col border border-gray-200 bg-white">
-      <div className="border-b border-gray-200 p-4">
+      <div className="flex items-center justify-between border-b border-gray-200 p-4">
         <h2 className="font-semibold tracking-tight">Swarn Assistant</h2>
+        <Button variant="outline" size="sm" onClick={startNewChat}>
+          New Startup
+        </Button>
       </div>
       
       <ScrollArea className="flex-1 p-4">

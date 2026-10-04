@@ -10,8 +10,8 @@ class ModelRouter:
     def __init__(self, settings):
         self.settings = settings
         # Defaults if not provided in settings
-        self.strong_model = getattr(settings, 'strong_model', None) or 'gemini-1.5-pro'
-        self.cheap_model = getattr(settings, 'cheap_model', None) or 'gemini-1.5-flash'
+        self.strong_model = getattr(settings, 'strong_model', None) or 'gemini-3.8-pro'
+        self.cheap_model = getattr(settings, 'cheap_model', None) or 'gemini-3.8-flash'
         
     def get_model(self, tier: Literal['strong', 'cheap'], temperature: float = 0.0) -> BaseChatModel:
         if tier == 'strong':

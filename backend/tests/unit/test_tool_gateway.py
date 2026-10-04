@@ -32,16 +32,19 @@ def test_registry_execute_not_found(registry):
     with pytest.raises(ValueError, match="Tool sub not found"):
         registry.execute_tool("sub", {"x": 2, "y": 1})
 
-def test_gateway_call_valid(gateway):
-    result = gateway.call_tool("add", {"x": 5, "y": 5})
+@pytest.mark.asyncio
+async def test_gateway_call_valid(gateway):
+    result = await gateway.call_tool("add", {"x": 5, "y": 5})
     assert result == {"status": "success", "data": 10}
 
-def test_gateway_call_invalid(gateway):
-    result = gateway.call_tool("add", {"x": 5})
+@pytest.mark.asyncio
+async def test_gateway_call_invalid(gateway):
+    result = await gateway.call_tool("add", {"x": 5})
     assert result["status"] == "error"
     assert "Invalid input for tool add" in result["message"]
 
-def test_gateway_call_not_found(gateway):
-    result = gateway.call_tool("sub", {"x": 5, "y": 5})
+@pytest.mark.asyncio
+async def test_gateway_call_not_found(gateway):
+    result = await gateway.call_tool("sub", {"x": 5, "y": 5})
     assert result["status"] == "error"
     assert "Tool sub not found" in result["message"]

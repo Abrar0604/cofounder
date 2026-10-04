@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel
+from apps.api.dependencies import get_current_user
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -8,12 +9,12 @@ class ChatRequest(BaseModel):
     client_id: str
 
 @router.post("/")
-async def submit_chat(req: ChatRequest, request: Request):
+async def submit_chat(req: ChatRequest, request: Request, user_id: str = Depends(get_current_user)):
     try:
         arq_pool = request.app.state.arq_pool
         await arq_pool.enqueue_job(
             "process_task", 
-            payload={"client_id": req.client_id, "message": req.message}
+            payload={"client_id": req.client_id, "message": req.message, "user_id": user_id}
         )
         return {"status": "enqueued", "client_id": req.client_id}
     except Exception as e:
