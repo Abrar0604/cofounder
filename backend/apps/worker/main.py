@@ -124,6 +124,17 @@ async def process_task(ctx, payload: dict):
         
         result = await graph.ainvoke(state, config={"configurable": {"thread_id": client_id}})
         
+        state_snapshot = await graph.aget_state({"configurable": {"thread_id": client_id}})
+        if state_snapshot and state_snapshot.tasks:
+            pending_interrupts = []
+            for t in state_snapshot.tasks:
+                if t.interrupts:
+                    for i in t.interrupts:
+                        pending_interrupts.append(i.value)
+            if pending_interrupts:
+                await bus.publish(client_id, "agent_survey", pending_interrupts[0])
+                return {"status": "interrupted"}
+                
         response_text = result.get("summary", "Done processing.")
     except Exception as e:
         response_text = f"Orchestrator error: {str(e)}"
@@ -146,8 +157,84 @@ async def process_task(ctx, payload: dict):
     await bus.publish(client_id, "agent_done", {"status": "success"})
     return {"status": "success"}
 
+
+async def resume_task(ctx, payload: dict):
+    job_id = ctx.get("job_id", "unknown")
+    print(f"Worker processing resume {job_id}")
+    
+    bus = ctx["bus"]
+    client_id = payload.get("client_id", "default")
+    answers = payload.get("answers", {})
+    
+    await bus.publish(client_id, "agent_action", {"text": "Resuming Orchestrator with survey answers..."})
+    
+    try:
+        from packages.agents.swarn_agents.base.agent_deps import AgentDeps
+        from packages.agents.swarn_agents.models.model_router import ModelRouter
+        from packages.decisions.adapters.jev_client import JevClient
+        from packages.brain.services.brain_service import BrainService
+        from packages.agents.swarn_agents.registry import AGENT_SPECS
+        from packages.agents.swarn_agents.orchestrator.graph import build_orchestrator_graph
+        from langgraph.types import Command
+        
+        models = ModelRouter(settings=None)
+        jev_client = JevClient()
+        class DecisionRuntimeWrapper:
+            def __init__(self, model):
+                self.model = model
+            async def run(self, use_case: str, state_obj) -> dict:
+                from packages.decisions.ports import Question
+                if hasattr(state_obj, "__dict__"):
+                    context = state_obj.__dict__
+                else:
+                    context = dict(state_obj)
+                q = Question(id=use_case, context=context, metadata={})
+                return await self.model.evaluate(q)
+        decisions = DecisionRuntimeWrapper(jev_client)
+        store = BrainService()
+        checkpointer = ctx["checkpointer"]
+        
+        deps = AgentDeps(
+            engine=None, redis=None, settings=None, registry=None, policies=None,
+            decisions=decisions, models=models, checkpointer=checkpointer, store=store
+        )
+        graph = build_orchestrator_graph(deps, AGENT_SPECS)
+        
+        result = await graph.ainvoke(Command(resume=answers), config={"configurable": {"thread_id": client_id}})
+        state_snapshot = await graph.aget_state({"configurable": {"thread_id": client_id}})
+        if state_snapshot and state_snapshot.tasks:
+            pending_interrupts = []
+            for t in state_snapshot.tasks:
+                if t.interrupts:
+                    for i in t.interrupts:
+                        pending_interrupts.append(i.value)
+            if pending_interrupts:
+                await bus.publish(client_id, "agent_survey", pending_interrupts[0])
+                return {"status": "interrupted"}
+                
+        response_text = result.get("summary", "Done processing.")
+    except Exception as e:
+        response_text = f"Orchestrator error: {str(e)}"
+        
+    if isinstance(response_text, list):
+        if len(response_text) > 0 and isinstance(response_text[0], dict) and "text" in response_text[0]:
+            response_text = response_text[0]["text"]
+        else:
+            response_text = str(response_text)
+    elif not isinstance(response_text, str):
+        response_text = str(response_text)
+    
+    tokens = response_text.split(" ")
+    for i, token in enumerate(tokens):
+        await bus.publish(client_id, "agent_token", {"text": token + (" " if i < len(tokens)-1 else "")})
+        import asyncio
+        await asyncio.sleep(0.05)
+        
+    await bus.publish(client_id, "agent_done", {"status": "success"})
+    return {"status": "success"}
+
 class WorkerSettings:
-    functions = [process_task]
+    functions = [process_task, resume_task]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(os.getenv("REDIS_URL", "redis://localhost:6379/0"))

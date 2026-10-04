@@ -7,36 +7,53 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SendHorizontal } from "lucide-react"
 
-export function ChatWindow() {
+export function ChatWindow({ startupId }: { startupId: string }) {
   const [isMounted, setIsMounted] = React.useState(false)
-  const [messages, setMessages] = React.useState<MessageProps[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = sessionStorage.getItem("swarn_chat_messages")
-      if (saved) return JSON.parse(saved)
-    }
-    return [{ id: "init", role: "assistant", content: "Hello, I am Swarn AI. How can I help you today?" }]
-  })
+  const [messages, setMessages] = React.useState<MessageProps[]>([])
   const [input, setInput] = React.useState("")
   const [isTyping, setIsTyping] = React.useState(false)
-  const [clientId, setClientId] = React.useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = sessionStorage.getItem("swarn_chat_client_id")
-      if (saved) return saved
-      const newId = "client_" + Math.random().toString(36).substring(7)
-      sessionStorage.setItem("swarn_chat_client_id", newId)
-      return newId
-    }
-    return ""
-  })
   const [isReady, setIsReady] = React.useState(false)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
   const scrollRef = React.useRef<HTMLDivElement>(null)
+  
+  const clientId = startupId;
 
   React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("swarn_chat_messages", JSON.stringify(messages))
+    setIsMounted(true)
+    // Fetch history
+    const fetchHistory = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/chat/history/${clientId}`)
+        if (response.ok) {
+          const data = await response.json()
+          setMessages(data.messages || [])
+        } else {
+          // Fallback to local storage if API doesn't exist
+          const saved = sessionStorage.getItem(`swarn_chat_messages_${clientId}`)
+          if (saved) {
+            setMessages(JSON.parse(saved))
+          } else {
+            setMessages([{ id: "init", role: "assistant", content: `Hello, I am Swarn AI. Welcome to your workspace for ${clientId}. How can I help you?`, isCompleted: true }])
+          }
+        }
+      } catch (err) {
+        // Fallback
+        const saved = sessionStorage.getItem(`swarn_chat_messages_${clientId}`)
+        if (saved) {
+          setMessages(JSON.parse(saved))
+        } else {
+          setMessages([{ id: "init", role: "assistant", content: `Hello, I am Swarn AI. Welcome to your workspace for ${clientId}. How can I help you?`, isCompleted: true }])
+        }
+      }
     }
-  }, [messages])
+    fetchHistory()
+  }, [clientId])
+
+  React.useEffect(() => {
+    if (messages.length > 0 && typeof window !== "undefined") {
+      sessionStorage.setItem(`swarn_chat_messages_${clientId}`, JSON.stringify(messages))
+    }
+  }, [messages, clientId])
 
   const activeClientIdRef = React.useRef(clientId)
   React.useEffect(() => {
@@ -60,7 +77,6 @@ export function ChatWindow() {
         }
         else if (data.type === "agent_thought" || data.type === "agent_action") {
           setIsTyping(true)
-          // Could display this somewhere, for now we just show typing indicator
         }
         else if (data.type === "agent_token") {
           setIsTyping(false)
@@ -69,7 +85,6 @@ export function ChatWindow() {
             if (last && last.role === "assistant" && last.id !== "init" && !last.isCompleted) {
               return prev.map((msg, i) => i === prev.length - 1 ? { ...msg, content: msg.content + data.payload.text } : msg)
             } else {
-              // Create a new message block if none exists
               return [...prev, { id: Date.now().toString(), role: "assistant", content: data.payload.text, isCompleted: false }]
             }
           })
@@ -148,31 +163,10 @@ export function ChatWindow() {
     }
   }
 
-  React.useEffect(() => {
-    setIsMounted(true)
-  }, [])
-
   if (!isMounted) return <div className="flex h-full items-center justify-center border border-gray-200 bg-white">Loading...</div>
-
-  const startNewChat = () => {
-    const newId = "client_" + Math.random().toString(36).substring(7)
-    setClientId(newId)
-    setIsTyping(false)
-    const initMsg = [{ id: "init", role: "assistant", content: "Hello, I am Swarn AI. How can I help you today?" }]
-    setMessages(initMsg)
-    sessionStorage.setItem("swarn_chat_client_id", newId)
-    sessionStorage.setItem("swarn_chat_messages", JSON.stringify(initMsg))
-  }
 
   return (
     <div className="flex h-full flex-col border border-gray-200 bg-white">
-      <div className="flex items-center justify-between border-b border-gray-200 p-4">
-        <h2 className="font-semibold tracking-tight">Swarn Assistant</h2>
-        <Button variant="outline" size="sm" onClick={startNewChat}>
-          New Startup
-        </Button>
-      </div>
-      
       <ScrollArea className="flex-1 p-4">
         <div className="flex flex-col gap-2">
           {messages.map((message) => (

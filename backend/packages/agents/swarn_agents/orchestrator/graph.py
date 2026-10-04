@@ -6,6 +6,7 @@ from packages.agents.swarn_agents.orchestrator.nodes.dispatch import dispatch_ag
 from packages.agents.swarn_agents.orchestrator.nodes.summarize import summarize_for_founder
 from packages.agents.swarn_agents.orchestrator.nodes.events import handle_event_for_replan
 from packages.agents.swarn_agents.base.compact_context import compact_messages
+from packages.agents.swarn_agents.orchestrator.nodes.survey import ask_for_survey
 
 def build_orchestrator_graph(deps, agent_specs: dict):
     workflow = StateGraph(OrchestratorState)
@@ -39,6 +40,9 @@ def build_orchestrator_graph(deps, agent_specs: dict):
     async def summarize_node(state):
         return await summarize_for_founder(deps, state)
         
+    async def survey_node(state):
+        return await ask_for_survey(deps, state)
+        
     async def event_node(state):
         return await handle_event_for_replan(deps, state, agent_specs)
         
@@ -47,6 +51,7 @@ def build_orchestrator_graph(deps, agent_specs: dict):
     workflow.add_node("intent", intent_node)
     workflow.add_node("router", router_node)
     workflow.add_node("dispatch", dispatch_node)
+    workflow.add_node("survey", survey_node)
     workflow.add_node("summarize", summarize_node)
     workflow.add_node("event_replan", event_node)
     
@@ -61,7 +66,14 @@ def build_orchestrator_graph(deps, agent_specs: dict):
     
     # Basic logic: Intent -> Router -> Dispatch -> (Agent Subgraphs) -> Event Replan -> Router
     workflow.add_edge("intent", "router")
-    workflow.add_edge("router", "dispatch")
+    
+    def route_after_router(state):
+        if state.get("needs_clarification"):
+            return "survey"
+        return "dispatch"
+        
+    workflow.add_conditional_edges("router", route_after_router, {"survey": "survey", "dispatch": "dispatch"})
+    workflow.add_edge("survey", "dispatch")
     
     def route_dispatch(state):
         active = state.get("active_agent")

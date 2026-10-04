@@ -23,5 +23,8 @@ async def choose_next_agent(deps, state: OrchestratorState, available_agents: li
     if action == 'end' or action not in available_agents:
         return {"next_agents": []}
         
+    if action in ['market_intel', 'product'] and not state.get("survey_results"):
+        return {"needs_clarification": True, "next_agents": [action]}
+        
     # Return the next agent to route to
-    return {"next_agents": [action]}
+    return {"needs_clarification": False, "next_agents": [action]}

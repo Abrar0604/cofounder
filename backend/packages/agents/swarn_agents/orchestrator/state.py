@@ -6,3 +6,5 @@ class OrchestratorState(AgentState):
     agent_hops: int
     next_agents: List[str]
     summary: Optional[str]
+    needs_clarification: Optional[bool]
+    survey_results: Optional[dict]

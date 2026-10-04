@@ -19,3 +19,19 @@ async def submit_chat(req: ChatRequest, request: Request, user_id: str = Depends
         return {"status": "enqueued", "client_id": req.client_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+class ResumeRequest(BaseModel):
+    client_id: str
+    answers: dict
+
+@router.post("/resume")
+async def resume_chat(req: ResumeRequest, request: Request, user_id: str = Depends(get_current_user)):
+    try:
+        arq_pool = request.app.state.arq_pool
+        await arq_pool.enqueue_job(
+            "resume_task", 
+            payload={"client_id": req.client_id, "answers": req.answers, "user_id": user_id}
+        )
+        return {"status": "enqueued", "client_id": req.client_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
