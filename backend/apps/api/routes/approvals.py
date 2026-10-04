@@ -21,6 +21,27 @@ class ApprovalRequest(BaseModel):
 class RejectionRequest(BaseModel):
     reason: str
 
+MOCK_APPROVALS = [
+    {
+        "id": "a1",
+        "title": "Phase 2 Formulation Spec Approval",
+        "requester": "Product & Tech Agent",
+        "date": "2026-10-04",
+        "details": "Ready to lock in ambient shelf-stable retort formulation for the coffee project. Requires founder sign-off before finding co-packers."
+    },
+    {
+        "id": "a2",
+        "title": "Budget allocation for Market Research",
+        "requester": "Financial Agent",
+        "date": "2026-10-04",
+        "details": "Need approval to allocate $1,500 for secondary data procurement on the Indian RTD Coffee market."
+    }
+]
+
+@router.get("/")
+async def list_approvals() -> list[dict]:
+    return MOCK_APPROVALS
+
 @router.get("/{thread_id}")
 async def get_approval(thread_id: str, service: ApprovalService = Depends(get_approval_service)):
     return await service.get_pending_approvals(thread_id)
