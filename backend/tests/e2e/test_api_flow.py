@@ -3,7 +3,7 @@ from httpx import AsyncClient, ASGITransport
 import hmac
 import hashlib
 from apps.webhooks.main import app as webhook_app
-from apps.webhooks.verify import GITHUB_SECRET
+from apps.webhooks.verify import META_SECRET
 from apps.api.routes.approvals import router as approvals_router
 from fastapi import FastAPI
 
@@ -13,18 +13,21 @@ api_app.include_router(approvals_router)
 
 @pytest.mark.asyncio
 async def test_webhook_flow():
-    # Simulate a webhook from GitHub
-    payload = b'{"action": "opened", "issue": {"title": "Test Issue"}}'
-    signature = "sha256=" + hmac.new(GITHUB_SECRET.encode(), payload, hashlib.sha256).hexdigest()
+    # Simulate a webhook from Meta
+    payload = b'{"object": "whatsapp_business_account", "entry": [{"id": "123", "changes": [{"value": {"messages": [{"text": {"body": "hello"}}]}}]}]}'
+    signature = "sha256=" + hmac.new(META_SECRET.encode(), payload, hashlib.sha256).hexdigest()
     
-    async with AsyncClient(transport=ASGITransport(app=webhook_app), base_url="http://test") as client:
-        response = await client.post(
-            "/github",
-            content=payload,
-            headers={"X-Hub-Signature-256": signature, "Content-Type": "application/json"}
-        )
-        assert response.status_code == 200
-        assert response.json() == {"status": "success"}
+    from unittest.mock import patch
+    with patch("apps.webhooks.main.bus.publish") as mock_publish:
+        async with AsyncClient(transport=ASGITransport(app=webhook_app), base_url="http://test") as client:
+            response = await client.post(
+                "/meta",
+                content=payload,
+                headers={"X-Hub-Signature-256": signature, "Content-Type": "application/json"}
+            )
+            assert response.status_code == 200
+            assert response.json() == {"status": "success"}
+            mock_publish.assert_called_once()
         
 @pytest.mark.asyncio
 async def test_approval_flow():

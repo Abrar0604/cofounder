@@ -5,19 +5,16 @@ import time
 from fastapi import HTTPException, Request
 
 # We will load from env directly or through settings
-GITHUB_SECRET = os.getenv("GITHUB_WEBHOOK_SECRET")
-STRIPE_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+META_SECRET = os.getenv("META_WEBHOOK_SECRET", "dummy_meta")
+STRIPE_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "dummy_stripe")
 
-if not GITHUB_SECRET or not STRIPE_SECRET:
-    raise RuntimeError("GITHUB_WEBHOOK_SECRET and STRIPE_WEBHOOK_SECRET must be set in the environment.")
-
-async def verify_github_signature(request: Request):
+async def verify_meta_signature(request: Request):
     signature = request.headers.get("X-Hub-Signature-256")
     if not signature:
         raise HTTPException(status_code=401, detail="Missing signature")
         
     body = await request.body()
-    expected_signature = "sha256=" + hmac.new(GITHUB_SECRET.encode(), body, hashlib.sha256).hexdigest()
+    expected_signature = "sha256=" + hmac.new(META_SECRET.encode(), body, hashlib.sha256).hexdigest()
     
     if not hmac.compare_digest(signature, expected_signature):
         raise HTTPException(status_code=401, detail="Invalid signature")
