@@ -12,13 +12,13 @@ class JevClient(DecisionModel):
     def __init__(self):
         # Primary model (fast, cheaper)
         self.primary_llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
+            model="gemini-3.8-flash",
             temperature=0.0
         ).with_structured_output(Decision)
         
         # Fallback model (more capable, slower)
         self.fallback_llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-pro",
+            model="gemini-3.8-pro",
             temperature=0.0
         ).with_structured_output(Decision)
 
