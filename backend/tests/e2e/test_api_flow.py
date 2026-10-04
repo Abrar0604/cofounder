@@ -131,7 +131,13 @@ async def test_full_system_e2e():
     signature = "sha256=" + hmac.new(META_SECRET.encode(), payload, hashlib.sha256).hexdigest()
     
     from unittest.mock import patch
-    with patch("apps.webhooks.main.bus.publish", return_value=1) as mock_publish:
+    
+    async def simulated_webhook_worker(channel, event_type, data):
+        # The worker would receive the message and use brain service to process it
+        brain.add_constraint("c1", {"source": "webhook", "data": data})
+        return 1
+
+    with patch("apps.webhooks.main.bus.publish", side_effect=simulated_webhook_worker) as mock_publish:
         async with AsyncClient(transport=ASGITransport(app=webhook_app), base_url="http://test") as client:
             response = await client.post(
                 "/meta",
@@ -140,9 +146,6 @@ async def test_full_system_e2e():
             )
             assert response.status_code == 200
             
-    # Simulate saving the webhook event to DB
-    brain.add_constraint("c1", {"source": "webhook", "data": json.loads(payload)})
-    
     # 4. Verify Database State
     assert "c1" in brain.constraints
     assert brain.constraints["c1"]["source"] == "webhook"

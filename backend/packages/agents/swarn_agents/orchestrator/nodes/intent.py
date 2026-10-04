@@ -19,4 +19,7 @@ async def classify_intent(deps, state: OrchestratorState) -> dict:
     
     decision = await deps.decisions.run('founder_intent', intent_state)
     
-    return {"task": decision.action, "request_text": content}
+    if not decision:
+        return {"task": "unknown", "request_text": content}
+    
+    return {"task": getattr(decision, "action", getattr(decision, "choice", "unknown")), "request_text": content}
