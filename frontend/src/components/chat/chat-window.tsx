@@ -29,7 +29,7 @@ export function ChatWindow() {
     
     setIsReady(false)
     // Connect to SSE stream
-    const eventSource = new EventSource(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/stream/${clientId}`)
+    const eventSource = new EventSource(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/stream/${clientId}`)
     
     eventSource.onmessage = (event) => {
       try {
@@ -107,7 +107,7 @@ export function ChatWindow() {
     setIsTyping(true)
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/chat/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/chat/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

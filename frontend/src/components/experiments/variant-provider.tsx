@@ -29,7 +29,7 @@ export function VariantProvider({ children }: { children: React.ReactNode }) {
       }
       
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
         const response = await fetch(`${baseUrl}/v1/experiments/assignments?user_id=${encodeURIComponent(userId as string)}`);
         if (response.ok) {
           const data = await response.json();
