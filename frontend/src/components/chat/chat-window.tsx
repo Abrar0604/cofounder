@@ -148,10 +148,22 @@ export function ChatWindow() {
 
   if (!isMounted) return <div className="flex h-full items-center justify-center border border-gray-200 bg-white">Loading...</div>
 
+  const startNewChat = () => {
+    const newId = "client_" + Math.random().toString(36).substring(7)
+    setClientId(newId)
+    const initMsg = [{ id: "init", role: "assistant", content: "Hello, I am Swarn AI. How can I help you today?" }]
+    setMessages(initMsg)
+    sessionStorage.setItem("swarn_chat_client_id", newId)
+    sessionStorage.setItem("swarn_chat_messages", JSON.stringify(initMsg))
+  }
+
   return (
     <div className="flex h-full flex-col border border-gray-200 bg-white">
-      <div className="border-b border-gray-200 p-4">
+      <div className="flex items-center justify-between border-b border-gray-200 p-4">
         <h2 className="font-semibold tracking-tight">Swarn Assistant</h2>
+        <Button variant="outline" size="sm" onClick={startNewChat}>
+          New Startup
+        </Button>
       </div>
       
       <ScrollArea className="flex-1 p-4">

@@ -55,6 +55,38 @@ async def process_task(ctx, payload: dict):
         store = BrainService()
         checkpointer = MemorySaver()
         
+        # --- NEW: Extract Venture Info and Create it automatically ---
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        fast_llm = ChatGoogleGenerativeAI(model="gemini-3.8-flash")
+        extract_prompt = f"Extract a short 2-3 word project name from this prompt. If it's about coffee, call it 'Coffee Project'. If unknown, call it 'New Venture'. Prompt: {user_message}"
+        name_res = await fast_llm.ainvoke(extract_prompt)
+        venture_name = name_res.content.strip().replace("'", "").replace('"', '')
+        
+        # Create it in our mock store
+        venture_id = f"v_{client_id}"
+        if venture_id not in store.ventures:
+            store.create_venture(venture_id, {
+                "name": venture_name,
+                "status": "Inception",
+                "budget": "TBD",
+                "progress": "0%"
+            })
+            # To make it globally accessible for the dashboard route, we should append to the global MOCK_VENTURES in the router
+            try:
+                from apps.api.routes.ventures import MOCK_VENTURES
+                # Check if it exists
+                if not any(v.get("id") == venture_id for v in MOCK_VENTURES):
+                    MOCK_VENTURES.append({
+                        "id": venture_id,
+                        "name": venture_name,
+                        "status": "Inception",
+                        "budget": "TBD",
+                        "progress": "0%"
+                    })
+            except ImportError:
+                pass
+        # -------------------------------------------------------------
+        
         deps = AgentDeps(
             engine=None,
             redis=None,
