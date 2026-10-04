@@ -28,12 +28,20 @@ async def process_task(ctx, payload: dict):
     await bus.publish(client_id, "agent_action", {"text": "Invoking Orchestrator..."})
     await asyncio.sleep(1)
     
-    response_text = "I have successfully analyzed the market data and found the following..."
+    try:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
+        prompt = f"The user says: {payload.get('message', '')}. Please provide a helpful response as Swarn AI, an intelligent autonomous agent managing their venture. Be concise."
+        res = await llm.ainvoke(prompt)
+        response_text = res.content
+    except Exception as e:
+        response_text = f"I have successfully received your request, but I encountered an error connecting to the LLM (Ensure GOOGLE_API_KEY is set). Error: {str(e)}"
+    
     tokens = response_text.split(" ")
     
-    for token in tokens:
-        await bus.publish(client_id, "agent_token", {"text": token + " "})
-        await asyncio.sleep(0.1)
+    for i, token in enumerate(tokens):
+        await bus.publish(client_id, "agent_token", {"text": token + (" " if i < len(tokens)-1 else "")})
+        await asyncio.sleep(0.05)
         
     await bus.publish(client_id, "agent_done", {"status": "success"})
     return {"status": "success"}
