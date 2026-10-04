@@ -3,6 +3,9 @@ from arq import create_pool
 from arq.connections import RedisSettings
 from packages.core.bus import EventBus
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Note: In a real system, you'd wire up the real AgentDeps here.
 # For now, we mock the dependency injection just to run the worker.
