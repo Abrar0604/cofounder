@@ -5,9 +5,15 @@ async def detect_frustration_node(deps, state: AgentState) -> dict:
     events = list(state.get("events", []))
     task = state.get("request_text") or state.get("task", "")
     
+    sentiment = "neutral"
+    for e in reversed(events):
+        if "sentiment" in e.get("payload", {}):
+            sentiment = e["payload"]["sentiment"]
+            break
+            
     d_state = DetectFrustrationState(
         task=task,
-        sentiment="neutral"
+        sentiment=sentiment
     )
     
     decision = await deps.decisions.run('detect_frustration', d_state)

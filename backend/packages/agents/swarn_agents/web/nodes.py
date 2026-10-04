@@ -6,9 +6,15 @@ async def define_specs(deps, state: AgentState) -> dict:
     
     task = state.get("request_text") or state.get("task", "")
     
+    audience = "General"
+    for e in reversed(events):
+        if "target_audience" in e.get("payload", {}):
+            audience = e["payload"]["target_audience"]
+            break
+            
     d_state = DefineLandingPageState(
         task=task,
-        target_audience="General"
+        target_audience=audience
     )
     
     decision = await deps.decisions.run('define_landing_page', d_state)

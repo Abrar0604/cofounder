@@ -5,9 +5,15 @@ async def qualify_lead_node(deps, state: AgentState) -> dict:
     events = list(state.get("events", []))
     task = state.get("request_text") or state.get("task", "")
     
+    score = 50
+    for e in reversed(events):
+        if "lead_score" in e.get("payload", {}):
+            score = int(e["payload"]["lead_score"])
+            break
+            
     d_state = QualifyLeadState(
         task=task,
-        lead_score=50
+        lead_score=score
     )
     
     decision = await deps.decisions.run('qualify_lead', d_state)

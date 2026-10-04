@@ -23,7 +23,8 @@ class ToolGateway:
                 if "data" in approval and isinstance(approval["data"], dict):
                     params.update(approval["data"])
                     
-                approval_id = approval.get("approval_id", "dummy_approval")
+                import uuid
+                approval_id = approval.get("approval_id") or str(uuid.uuid4())
                 self.registry.pending_approvals[approval_id] = name
                 
             result = self.registry.execute_tool(name, params, approval_id=approval_id)

@@ -6,9 +6,15 @@ async def draft_calendar(deps, state: AgentState) -> dict:
     
     task = state.get("request_text") or state.get("task", "")
     
+    timeline = "1 month"
+    for e in reversed(events):
+        if "timeline" in e.get("payload", {}):
+            timeline = e["payload"]["timeline"]
+            break
+            
     d_state = DraftContentCalendarState(
         task=task,
-        timeline="1 month"
+        timeline=timeline
     )
     
     decision = await deps.decisions.run('draft_content_calendar', d_state)
