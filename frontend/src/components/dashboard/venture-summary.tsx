@@ -16,31 +16,18 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-const mockVentures = [
-  {
-    id: "v1",
-    name: "Alpha Project",
-    status: "Active",
-    budget: "$120,000",
-    progress: "65%",
-  },
-  {
-    id: "v2",
-    name: "Beta Initiative",
-    status: "Pending",
-    budget: "$45,000",
-    progress: "10%",
-  },
-  {
-    id: "v3",
-    name: "Gamma Expansion",
-    status: "Completed",
-    budget: "$300,000",
-    progress: "100%",
-  },
-]
+export async function VentureSummary() {
+  let ventures: any[] = []
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
+    const res = await fetch(`${baseUrl}/ventures/`, { cache: 'no-store' })
+    if (res.ok) {
+      ventures = await res.json()
+    }
+  } catch (error) {
+    console.error("Failed to fetch ventures", error)
+  }
 
-export function VentureSummary() {
   return (
     <Card className="rounded-none shadow-none">
       <CardHeader>
@@ -58,18 +45,26 @@ export function VentureSummary() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockVentures.map((venture) => (
-              <TableRow key={venture.id}>
-                <TableCell className="font-medium">{venture.name}</TableCell>
-                <TableCell>
-                  <Badge variant={venture.status === "Active" ? "default" : venture.status === "Pending" ? "secondary" : "outline"}>
-                    {venture.status}
-                  </Badge>
+            {ventures.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-gray-500 py-6">
+                  No ventures found. Start a new project in the chat!
                 </TableCell>
-                <TableCell>{venture.budget}</TableCell>
-                <TableCell className="text-right">{venture.progress}</TableCell>
               </TableRow>
-            ))}
+            ) : (
+              ventures.map((venture) => (
+                <TableRow key={venture.id}>
+                  <TableCell className="font-medium">{venture.name}</TableCell>
+                  <TableCell>
+                    <Badge variant={venture.status === "Active" ? "default" : venture.status === "Pending" ? "secondary" : "outline"}>
+                      {venture.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{venture.budget}</TableCell>
+                  <TableCell className="text-right">{venture.progress}</TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </CardContent>

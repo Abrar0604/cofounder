@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from packages.core.config import settings
-from apps.api.routes import approvals, experiments, stream, chat
+from apps.api.routes import approvals, experiments, stream, chat, ventures
 
 from contextlib import asynccontextmanager
 from arq import create_pool
@@ -33,6 +33,7 @@ app.include_router(approvals.router)
 app.include_router(experiments.router)
 app.include_router(stream.router)
 app.include_router(chat.router)
+app.include_router(ventures.router)
 
 @app.get("/health")
 async def health_check():
