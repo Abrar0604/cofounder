@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { SendHorizontal } from "lucide-react"
 
 export function ChatWindow() {
+  const [isMounted, setIsMounted] = React.useState(false)
   const [messages, setMessages] = React.useState<MessageProps[]>(() => {
     if (typeof window !== "undefined") {
       const saved = sessionStorage.getItem("swarn_chat_messages")
@@ -140,6 +141,12 @@ export function ChatWindow() {
       setIsTyping(false)
     }
   }
+
+  React.useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  if (!isMounted) return <div className="flex h-full items-center justify-center border border-gray-200 bg-white">Loading...</div>
 
   return (
     <div className="flex h-full flex-col border border-gray-200 bg-white">
