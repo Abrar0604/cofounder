@@ -9,7 +9,12 @@ publisher = SSEPublisher()
 async def stream_events(client_id: str, request: Request):
     return StreamingResponse(
         publisher.event_generator(client_id),
-        media_type="text/event-stream"
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
     )
 
 @router.post("/{client_id}/test-publish")
