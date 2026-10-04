@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react"
 import { Home, Inbox, MessageSquare, Settings } from "lucide-react"
 
