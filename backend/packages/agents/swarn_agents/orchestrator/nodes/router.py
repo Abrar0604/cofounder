@@ -16,8 +16,12 @@ async def choose_next_agent(deps, state: OrchestratorState, available_agents: li
     
     decision = await deps.decisions.run('route_supervisor', route_state)
     
-    if decision.choice == 'end' or decision.choice not in available_agents:
+    if not decision:
+        return {"next_agents": []}
+        
+    action = getattr(decision, "action", getattr(decision, "choice", "end"))
+    if action == 'end' or action not in available_agents:
         return {"next_agents": []}
         
     # Return the next agent to route to
-    return {"next_agents": [decision.choice]}
+    return {"next_agents": [action]}
