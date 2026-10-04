@@ -21,26 +21,25 @@ class ApprovalRequest(BaseModel):
 class RejectionRequest(BaseModel):
     reason: str
 
-MOCK_APPROVALS = [
-    {
-        "id": "a1",
-        "title": "Phase 2 Formulation Spec Approval",
-        "requester": "Product & Tech Agent",
-        "date": "2026-10-04",
-        "details": "Ready to lock in ambient shelf-stable retort formulation for the coffee project. Requires founder sign-off before finding co-packers."
-    },
-    {
-        "id": "a2",
-        "title": "Budget allocation for Market Research",
-        "requester": "Financial Agent",
-        "date": "2026-10-04",
-        "details": "Need approval to allocate $1,500 for secondary data procurement on the Indian RTD Coffee market."
-    }
-]
-
 @router.get("/")
-async def list_approvals() -> list[dict]:
-    return MOCK_APPROVALS
+async def list_approvals(service: ApprovalService = Depends(get_approval_service)) -> list[dict]:
+    # Extract unique thread_ids from the MemorySaver storage
+    thread_ids = set([key[0] for key in shared_checkpointer.storage.keys()])
+    
+    pending = []
+    for t_id in thread_ids:
+        state = await service.get_pending_approvals(t_id)
+        if state and state.get("status") == "pending_approval":
+            # Extract data from the pending node state if possible, otherwise use generic data
+            # state["pending_nodes"] contains the interrupted nodes
+            pending.append({
+                "id": f"approval_{t_id}",
+                "title": f"Approval required for thread {t_id}",
+                "requester": "System",
+                "date": "Now",
+                "details": f"Pending action on nodes: {state.get('pending_nodes', [])}. Please review and approve."
+            })
+    return pending
 
 @router.get("/{thread_id}")
 async def get_approval(thread_id: str, service: ApprovalService = Depends(get_approval_service)):

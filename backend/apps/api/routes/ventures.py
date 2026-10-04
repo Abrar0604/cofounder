@@ -1,26 +1,27 @@
 from fastapi import APIRouter
 from typing import List, Dict, Any
 
-router = APIRouter(prefix="/ventures", tags=["ventures"])
+import os
+import json
+import redis.asyncio as redis
 
-# Global mock for demonstration until a DB is hooked up
-MOCK_VENTURES = [
-  {
-    "id": "v1",
-    "name": "Alpha Project",
-    "status": "Active",
-    "budget": "$120,000",
-    "progress": "65%",
-  },
-  {
-    "id": "v2",
-    "name": "Beta Initiative",
-    "status": "Pending",
-    "budget": "$45,000",
-    "progress": "10%",
-  }
-]
+router = APIRouter(prefix="/ventures", tags=["ventures"])
 
 @router.get("/")
 async def list_ventures() -> List[Dict[str, Any]]:
-    return MOCK_VENTURES
+    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    client = redis.from_url(redis_url)
+    try:
+        data = await client.hgetall("swarn_ventures")
+        if not data:
+            return []
+        
+        ventures = []
+        for v in data.values():
+            try:
+                ventures.append(json.loads(v))
+            except:
+                pass
+        return ventures
+    finally:
+        await client.close()

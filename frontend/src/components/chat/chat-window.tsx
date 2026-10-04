@@ -151,6 +151,7 @@ export function ChatWindow() {
   const startNewChat = () => {
     const newId = "client_" + Math.random().toString(36).substring(7)
     setClientId(newId)
+    setIsTyping(false)
     const initMsg = [{ id: "init", role: "assistant", content: "Hello, I am Swarn AI. How can I help you today?" }]
     setMessages(initMsg)
     sessionStorage.setItem("swarn_chat_client_id", newId)
